@@ -5,6 +5,12 @@ DEBUG = True  # Production should have DEBUG=False
 
 ALLOWED_HOSTS = ["teknusa.com", "www.teknusa.com"]
 
+# Static files configuration for production
+STATIC_URL = "/static/"
+STATIC_ROOT = "/home/teknusas/teknusa.com/static"
+STATICFILES_DIRS = []  # Empty since static files are collected to production root
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
 # Use environment variable for SECRET_KEY in production
 SECRET_KEY = os.getenv("SECRET_KEY", "your-production-secret-key-here-change-this")
 
