@@ -19,7 +19,9 @@ def channel_list(request):
         if channels.exists():
             grouped_by_channel = {}
             for ch in channels:
-                grouped_by_channel.setdefault(ch.channel.name, []).append(ch)
+                channel_name = ch.channel.name if ch.channel else "Unknown Channel"
+                grouped_by_channel.setdefault(channel_name, []).append(ch)
+
             # Sort each channel group: unposted (by rencana desc) first, then posted (by tanggal desc)
             for key, ch_list in grouped_by_channel.items():
                 unposted = [c for c in ch_list if not c.is_posted]
