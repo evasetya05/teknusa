@@ -1,0 +1,362 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Detail Lead{% endblock %}
+
+{% block extra_css %}
+<style>
+    .page-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+
+    .page-header h1 {
+        font-size: 1.8rem;
+        font-weight: 600;
+        margin: 0;
+        color: #111827;
+    }
+
+    .badge {
+        border-radius: 999px;
+        padding: 0.35rem 0.75rem;
+        font-weight: 600;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .lead-overview-card {
+        background: linear-gradient(135deg, #eef2ff 0%, #fdf2f8 100%);
+        border-radius: 20px;
+        padding: 28px;
+        box-shadow: 0 18px 45px rgba(15, 23, 42, 0.12);
+        margin-bottom: 2rem;
+        border: 1px solid rgba(59, 130, 246, 0.12);
+    }
+
+    .lead-stats {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        margin-top: 1.5rem;
+    }
+
+    .stat-chip {
+        background: rgba(255, 255, 255, 0.75);
+        border-radius: 12px;
+        padding: 0.75rem 1rem;
+        min-width: 160px;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        font-weight: 600;
+        color: #1f2937;
+    }
+
+    .stat-chip i {
+        color: #2563eb;
+    }
+
+    .info-card {
+        background: #fff;
+        border-radius: 16px;
+        border: 1px solid #e5e7eb;
+        box-shadow: 0 16px 35px rgba(15, 23, 42, 0.08);
+        padding: 24px;
+        height: 100%;
+    }
+
+    .info-card h2 {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #2563eb;
+        margin-bottom: 1.25rem;
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
+    }
+
+    .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 1.5rem;
+    }
+
+    .info-item span {
+        display: block;
+        font-size: 0.72rem;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: #6b7280;
+        margin-bottom: 0.4rem;
+    }
+
+    .info-item strong {
+        font-size: 1rem;
+        color: #111827;
+    }
+
+    .info-item strong a {
+        text-decoration: none;
+    }
+
+    .card-action {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+    }
+
+    .card-action small {
+        color: #6b7280;
+    }
+
+    .status-card select {
+        min-height: 48px;
+    }
+
+    .interaction-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+
+    .interaction-item {
+        display: flex;
+        gap: 0.85rem;
+        padding: 0.85rem 0;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .interaction-item:last-child {
+        border-bottom: none;
+    }
+
+    .interaction-meta {
+        min-width: 120px;
+        font-size: 0.78rem;
+        color: #6b7280;
+        display: flex;
+        flex-direction: column;
+        gap: 0.15rem;
+    }
+
+    .interaction-meta i {
+        color: #2563eb;
+    }
+
+    .interaction-note {
+        flex: 1;
+        font-size: 0.95rem;
+        color: #1f2937;
+    }
+
+    .empty-state {
+        background: #f9fafb;
+        border: 1px dashed #d1d5db;
+        border-radius: 12px;
+        padding: 2rem;
+        text-align: center;
+        color: #6b7280;
+    }
+
+    .interaction-form textarea {
+        resize: vertical;
+        min-height: 120px;
+    }
+
+    @media (max-width: 992px) {
+        .lead-stats {
+            flex-direction: column;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>Detail Lead</h1>
+        <p class="text-muted mb-0">Informasi lengkap terkait status dan interaksi dengan lead.</p>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+        <a href="{% url 'leads:lead_list' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-1"></i>
+            Kembali
+        </a>
+        <a href="{% url 'leads:lead_edit' lead.pk %}" class="btn btn-primary">
+            <i class="fas fa-edit me-1"></i>
+            Edit Lead
+        </a>
+    </div>
+</div>
+
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    {% endfor %}
+{% endif %}
+
+<div class="lead-overview-card">
+    <div class="d-flex flex-wrap justify-content-between gap-3">
+        <div>
+            <span class="badge {% if lead.status == 'won' %}bg-success{% elif lead.status == 'lost' %}bg-danger{% else %}bg-primary{% endif %}">{{ lead.get_status_display }}</span>
+            <h2 class="mt-3 mb-2">{{ lead.name }}</h2>
+            <p class="text-muted mb-2">
+                {% if lead.company %}<i class="fas fa-building me-2"></i>{{ lead.company }}{% else %}<span class="text-muted">Perusahaan belum diisi</span>{% endif %}
+            </p>
+            <p class="mb-0">
+                <i class="fas fa-map-marker-alt me-2 text-primary"></i>{{ lead.get_lead_source_display|default:"Lead source belum diisi" }}
+            </p>
+        </div>
+        <div class="text-md-end">
+            <div class="text-muted">Dibuat pada</div>
+            <h4 class="fw-semibold mb-1">{{ lead.created_at|date:"d M Y, H:i" }}</h4>
+            <small class="text-muted">{{ lead.created_at|timesince }} yang lalu</small>
+        </div>
+    </div>
+
+    <div class="lead-stats mt-4">
+        <div class="stat-chip">
+            <i class="fas fa-comments"></i>
+            <div>
+                <small class="text-muted d-block">Jumlah Interaksi</small>
+                {{ lead.jumlah_interaksi }}x
+            </div>
+        </div>
+        <div class="stat-chip">
+            <i class="fas fa-clock"></i>
+            <div>
+                <small class="text-muted d-block">Interaksi Terakhir</small>
+                {% if lead.interaksi_terakhir %}
+                    {{ lead.interaksi_terakhir|date:"d M Y, H:i" }}
+                {% else %}
+                    Belum ada
+                {% endif %}
+            </div>
+        </div>
+        <div class="stat-chip">
+            <i class="fas fa-calendar-check"></i>
+            <div>
+                <small class="text-muted d-block">Follow-up Berikutnya</small>
+                {% if lead.next_follow_up %}{{ lead.next_follow_up|date:"d M Y" }}{% else %}Belum dijadwalkan{% endif %}
+            </div>
+        </div>
+        <div class="stat-chip">
+            <i class="fas fa-coins"></i>
+            <div>
+                <small class="text-muted d-block">Estimasi Nilai</small>
+                {% if lead.estimated_value %}Rp {{ lead.estimated_value|floatformat:0 }}{% else %}Belum diisi{% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-7">
+        <div class="info-card">
+            <h2><i class="fas fa-id-badge"></i> Informasi Kontak</h2>
+            <div class="info-grid">
+                <div class="info-item">
+                    <span>Email</span>
+                    <strong>{{ lead.email|default:"-" }}</strong>
+                </div>
+                <div class="info-item">
+                    <span>Nomor Telepon</span>
+                    <strong>{{ lead.phone|default:"-" }}</strong>
+                </div>
+                <div class="info-item">
+                    <span>Account Medsos</span>
+                    <strong>{{ lead.account_medsos|default:"-" }}</strong>
+                </div>
+                <div class="info-item">
+                    <span>Assigned To</span>
+                    <strong>{% if lead.assigned_to %}{{ lead.assigned_to.get_full_name|default:lead.assigned_to.username }}{% else %}-{% endif %}</strong>
+                </div>
+                <div class="info-item">
+                    <span>Prioritas</span>
+                    <strong>
+                        <span class="badge {% if lead.priority == 'hot' %}bg-danger{% elif lead.priority == 'warm' %}bg-warning text-dark{% else %}bg-secondary{% endif %}">{{ lead.get_priority_display }}</span>
+                    </strong>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-5">
+        <div class="info-card status-card">
+            <form method="post" novalidate>
+                {% csrf_token %}
+                <div class="card-action mb-3">
+                    <h2><i class="fas fa-sync-alt"></i> Status &amp; Interaksi</h2>
+                    <small>Perbarui status sekaligus catatan interaksi terbaru.</small>
+                </div>
+
+                <div class="mb-3">
+                    <label for="{{ detail_form.status.id_for_label }}" class="form-label">Status Lead</label>
+                    {{ detail_form.status }}
+                    {% if detail_form.status.errors %}
+                        <div class="invalid-feedback d-block">{{ detail_form.status.errors|striptags }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="mb-3">
+                    <label for="{{ detail_form.note.id_for_label }}" class="form-label">Catatan Interaksi</label>
+                    {{ detail_form.note }}
+                    {% if detail_form.note.errors %}
+                        <div class="invalid-feedback d-block">{{ detail_form.note.errors|striptags }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="text-end">
+                    <button type="submit" class="btn btn-primary btn-icon">
+                        <i class="fas fa-save"></i>
+                        Simpan Perubahan
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mt-1">
+    <div class="col-12">
+        <div class="info-card">
+            <div class="card-action mb-3">
+                <h2><i class="fas fa-comments"></i> Riwayat Interaksi</h2>
+                <small>Catatan percakapan dan tindak lanjut.</small>
+            </div>
+
+            {% if lead.interactions.exists %}
+                <ul class="interaction-list">
+                    {% for interaction in lead.interactions.all %}
+                        <li class="interaction-item">
+                            <div class="interaction-meta">
+                                <span><i class="far fa-clock me-1"></i>{{ interaction.created_at|date:"d M Y" }}</span>
+                                <span>{{ interaction.created_at|date:"H:i" }} WIB</span>
+                                <span>{{ interaction.created_at|timesince }} lalu</span>
+                            </div>
+                            <div class="interaction-note">
+                                {{ interaction.note|linebreaksbr }}
+                            </div>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <div class="empty-state">
+                    <i class="far fa-comment-dots fa-2x mb-3"></i>
+                    <p class="mb-0">Belum ada interaksi yang tercatat.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

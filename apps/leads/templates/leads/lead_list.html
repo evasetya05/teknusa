@@ -1,0 +1,216 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Daftar Lead{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+        <h1 class="h2">Daftar Lead</h1>
+        <div class="btn-toolbar mb-2 mb-md-0 align-items-center">
+            <!-- Filter Dropdown -->
+            <form method="get" class="d-inline me-3">
+                <select name="lead_source" onchange="this.form.submit()" class="form-select form-select-sm">
+                    <option value="">Semua Lead Source</option>
+                    {% for value, label in lead_source_choices %}
+                        <option value="{{ value }}" {% if selected_lead_source == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </form>
+            <div class="btn-group">
+                <a href="{% url 'leads:lead_analysis' %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-chart-line"></i> Analisis Leads
+                </a>
+                <a href="{% url 'leads:lead_create' %}" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Tambah Lead
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <style>
+    /* ======== TABEL ======== */
+    .table-container {
+        background-color: #fff;
+        border-radius: 12px;
+        box-shadow: 0 10px 30px rgba(31, 41, 55, 0.08);
+        overflow: hidden;
+        margin-bottom: 24px;
+    }
+
+    .table {
+        margin-bottom: 0;
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+
+    .table thead th {
+        background-color: #f4f6fb;
+        text-transform: uppercase;
+        font-size: 12px;
+        letter-spacing: 0.08em;
+        color: #6b7280;
+        border-bottom: 0;
+    }
+
+    .table tbody tr {
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .table tbody tr:hover {
+        background-color: #fdfdfd;
+        transform: translateY(-2px);
+        box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
+    }
+
+    .table td, .table th {
+        padding: 14px 18px;
+        vertical-align: middle;
+        border-top: 1px solid #eef2ff;
+        white-space: nowrap;
+    }
+
+    .table td:first-child {
+        font-weight: 600;
+        color: #111827;
+        min-width: 200px;
+    }
+
+    .table td:nth-child(2),
+    .table td:nth-child(3),
+    .table td:nth-child(4),
+    .table td:nth-child(5) {
+        min-width: 150px;
+    }
+
+    .badge {
+        font-weight: 600;
+        padding: 6px 12px;
+        border-radius: 999px;
+        font-size: 12px;
+    }
+
+    .stat-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 10px;
+        border-radius: 8px;
+        background-color: #f3f4f6;
+        font-size: 13px;
+        color: #374151;
+    }
+
+    .stat-pill i {
+        color: #2563eb;
+    }
+
+    /* Responsive table */
+    @media (max-width: 768px) {
+        .table-container {
+            border-radius: 8px;
+        }
+
+        .table thead {
+            display: none;
+        }
+
+        .table, .table tbody, .table tr, .table td {
+            display: block;
+            width: 100%;
+        }
+
+        .table tr {
+            margin-bottom: 1.25rem;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .table td {
+            text-align: left;
+            padding: 12px 16px 12px 120px;
+            position: relative;
+            border-top: 1px solid #f3f4f6;
+        }
+
+        .table td::before {
+            content: attr(data-label);
+            position: absolute;
+            left: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-weight: 600;
+            color: #6b7280;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .table td:first-child {
+            border-top: 0;
+        }
+
+        .table td:last-child {
+            border-bottom: 0;
+        }
+    }
+    </style>
+
+    <div class="table-responsive">
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>Nama</th>
+                    <th>Status</th>
+                  
+                    <th>Perusahaan</th>
+                    <th>Account Medsos</th>
+                    <th>Lead Source</th>
+                    <th>Next Follow-up</th>
+                   
+                    <th>Dibuat</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for lead in leads %}
+                <tr>
+                    <td data-label="Nama">
+                        <a href="{% url 'leads:lead_detail' lead.pk %}">{{ lead.name }}</a>
+                    </td>
+                    <td data-label="Status">
+                        <span class="badge {% if lead.status == 'won' %}bg-success{% elif lead.status == 'lost' %}bg-danger{% else %}bg-primary{% endif %}">
+                            {{ lead.get_status_display }}
+                        </span>
+                   
+                    <td data-label="Perusahaan">{{ lead.company|default:"-" }}</td>
+                    <td data-label="Account Medsos">{{ lead.account_medsos|default:"-" }}</td>
+                    <td data-label="Lead Source">{{ lead.get_lead_source_display|default:"-" }}</td>
+                    <td data-label="Next Follow-up">{% if lead.next_follow_up %}{{ lead.next_follow_up|date:"d/m/Y" }}{% else %}-{% endif %}</td>
+                    
+                    </td>
+                    <td data-label="Dibuat">{{ lead.created_at|date:"d/m/Y" }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="9" class="text-center py-4 text-muted">Belum ada lead.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Tambahkan script khusus halaman di sini jika diperlukan
+    document.addEventListener('DOMContentLoaded', function() {
+        // Inisialisasi tooltip
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,368 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}{% if lead %}Edit{% else %}Tambah{% endif %} Lead{% endblock %}
+
+{% block extra_css %}
+<style>
+    .page-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 2rem;
+        gap: 1rem;
+    }
+
+    .page-header h1 {
+        font-size: 1.75rem;
+        font-weight: 600;
+        margin: 0;
+        color: #111827;
+    }
+
+    .lead-card {
+        background: #fff;
+        border-radius: 16px;
+        box-shadow: 0 12px 32px rgba(15, 23, 42, 0.12);
+        padding: 24px 28px;
+        margin-bottom: 28px;
+        border: 1px solid #eef2ff;
+    }
+
+    .lead-card h2 {
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: #2563eb;
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .lead-card h2 i {
+        font-size: 1.1rem;
+    }
+
+    .form-section {
+        margin-bottom: 2rem;
+    }
+
+    .form-section h3 {
+        font-size: 1rem;
+        font-weight: 600;
+        color: #4b5563;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        margin-bottom: 1rem;
+    }
+
+    .form-floating label {
+        color: #6b7280;
+    }
+
+    .interaction-card {
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 12px;
+        background: #f9fafb;
+    }
+
+    .interaction-card h4 {
+        font-size: 0.95rem;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        color: #1f2937;
+    }
+
+    .form-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 12px;
+        margin-top: 2rem;
+    }
+
+    .btn-icon {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+    }
+
+    .btn-outline-secondary {
+        border-color: #d1d5db;
+        color: #4b5563;
+    }
+
+    .btn-outline-secondary:hover {
+        background-color: #f3f4f6;
+        color: #111827;
+    }
+
+    .alert-unsaved {
+        display: none;
+        position: sticky;
+        top: 0;
+        z-index: 1000;
+        background: #fef3c7;
+        border: 1px solid #f59e0b;
+        color: #92400e;
+        padding: 0.75rem 1rem;
+        border-radius: 0.5rem;
+        margin-bottom: 1rem;
+        font-weight: 500;
+    }
+
+    .alert-unsaved i {
+        color: #f59e0b;
+        margin-right: 0.5rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>{% if lead %}Edit{% else %}Tambah{% endif %} Lead</h1>
+        <p class="text-muted mb-0">Kelola data lead dan interaksi dengan antarmuka yang lebih nyaman.</p>
+    </div>
+    <a href="{% url 'leads:lead_list' %}" class="btn btn-outline-secondary btn-icon">
+        <i class="fas fa-arrow-left"></i>
+        Kembali ke daftar
+    </a>
+</div>
+
+<div id="unsaved-alert" class="alert-unsaved">
+    <i class="fas fa-exclamation-triangle"></i>
+    Anda memiliki perubahan yang belum disimpan. Jangan lupa menyimpan sebelum meninggalkan halaman.
+</div>
+
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    {% endfor %}
+{% endif %}
+
+{% if form.non_field_errors %}
+    <div class="alert alert-danger" role="alert">
+        {% for error in form.non_field_errors %}
+            <div>{{ error }}</div>
+        {% endfor %}
+    </div>
+{% endif %}
+
+{% if formset.non_form_errors %}
+    <div class="alert alert-danger" role="alert">
+        {% for error in formset.non_form_errors %}
+            <div>{{ error }}</div>
+        {% endfor %}
+    </div>
+{% endif %}
+
+<div class="lead-card">
+    <h2><i class="fas fa-address-card"></i> Informasi Lead</h2>
+
+    <form method="post" novalidate>
+        {% csrf_token %}
+
+        <div class="row g-4 form-section">
+            <div class="col-md-6">
+                <div class="form-floating">
+                    {{ form.name }}
+                    <label for="{{ form.name.id_for_label }}">Nama</label>
+                    {% if form.name.errors %}
+                        <div class="invalid-feedback d-block">{{ form.name.errors|striptags }}</div>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="form-floating">
+                    {{ form.status }}
+                    <label for="{{ form.status.id_for_label }}">Status</label>
+                    {% if form.status.errors %}
+                        <div class="invalid-feedback d-block">{{ form.status.errors|striptags }}</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="form-floating">
+                    {{ form.email }}
+                    <label for="{{ form.email.id_for_label }}">Email</label>
+                    {% if form.email.errors %}
+                        <div class="invalid-feedback d-block">{{ form.email.errors|striptags }}</div>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="form-floating">
+                    {{ form.phone }}
+                    <label for="{{ form.phone.id_for_label }}">Nomor Telepon</label>
+                    {% if form.phone.errors %}
+                        <div class="invalid-feedback d-block">{{ form.phone.errors|striptags }}</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="form-floating">
+                    {{ form.company }}
+                    <label for="{{ form.company.id_for_label }}">Perusahaan</label>
+                    {% if form.company.errors %}
+                        <div class="invalid-feedback d-block">{{ form.company.errors|striptags }}</div>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="form-floating">
+                    {{ form.account_medsos }}
+                    <label for="{{ form.account_medsos.id_for_label }}">Account Medsos</label>
+                    {% if form.account_medsos.errors %}
+                        <div class="invalid-feedback d-block">{{ form.account_medsos.errors|striptags }}</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="form-floating">
+                    {{ form.lead_source }}
+                    <label for="{{ form.lead_source.id_for_label }}">Lead Source</label>
+                    {% if form.lead_source.errors %}
+                        <div class="invalid-feedback d-block">{{ form.lead_source.errors|striptags }}</div>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="form-floating">
+                    {{ form.priority }}
+                    <label for="{{ form.priority.id_for_label }}">Prioritas</label>
+                    {% if form.priority.errors %}
+                        <div class="invalid-feedback d-block">{{ form.priority.errors|striptags }}</div>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="form-floating">
+                    {{ form.next_follow_up }}
+                    <label for="{{ form.next_follow_up.id_for_label }}">Next Follow Up</label>
+                    {% if form.next_follow_up.errors %}
+                        <div class="invalid-feedback d-block">{{ form.next_follow_up.errors|striptags }}</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="form-floating">
+                    {{ form.estimated_value }}
+                    <label for="{{ form.estimated_value.id_for_label }}">Estimasi Nilai (Rp)</label>
+                    {% if form.estimated_value.errors %}
+                        <div class="invalid-feedback d-block">{{ form.estimated_value.errors|striptags }}</div>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="form-floating">
+                    {{ form.assigned_to }}
+                    <label for="{{ form.assigned_to.id_for_label }}">Sales Owner</label>
+                    {% if form.assigned_to.errors %}
+                        <div class="invalid-feedback d-block">{{ form.assigned_to.errors|striptags }}</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="form-section">
+            <h3>Interaksi</h3>
+            {{ formset.management_form }}
+            {% for interaction_form in formset %}
+                <div class="interaction-card">
+                    {{ interaction_form.id }}
+                    {% if interaction_form.hidden_fields %}
+                        {% for hidden in interaction_form.hidden_fields %}
+                            {{ hidden }}
+                        {% endfor %}
+                    {% endif %}
+                    {% if interaction_form.non_field_errors %}
+                        <div class="alert alert-danger mb-2" role="alert">
+                            {% for error in interaction_form.non_field_errors %}
+                                <div>{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                    <div class="form-floating">
+                        {{ interaction_form.note }}
+                        <label for="{{ interaction_form.note.id_for_label }}">Catatan Interaksi</label>
+                        {% if interaction_form.note.errors %}
+                            <div class="invalid-feedback d-block">{{ interaction_form.note.errors|striptags }}</div>
+                        {% endif %}
+                    </div>
+                    {% if interaction_form.DELETE %}
+                        <div class="form-check mt-3">
+                            {{ interaction_form.DELETE }}
+                            <label class="form-check-label" for="{{ interaction_form.DELETE.id_for_label }}">Hapus interaksi ini</label>
+                        </div>
+                    {% endif %}
+                </div>
+            {% empty %}
+                <p class="text-muted">Belum ada interaksi tambahan.</p>
+            {% endfor %}
+        </div>
+
+        <div class="form-actions">
+            <a href="{% url 'leads:lead_list' %}" class="btn btn-outline-secondary btn-icon">
+                <i class="fas fa-times"></i>
+                Batal
+            </a>
+            <button type="submit" class="btn btn-primary btn-icon">
+                <i class="fas fa-save"></i>
+                Simpan Lead
+            </button>
+        </div>
+    </form>
+</div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    let formChanged = false;
+    const form = document.querySelector('form');
+    const alertDiv = document.getElementById('unsaved-alert');
+
+    // Track changes on form inputs
+    form.addEventListener('input', function(e) {
+        if (e.target.matches('input, select, textarea')) {
+            formChanged = true;
+            alertDiv.style.display = 'block';
+        }
+    });
+
+    // Warn before leaving page if form changed
+    window.addEventListener('beforeunload', function(e) {
+        if (formChanged) {
+            e.preventDefault();
+            e.returnValue = 'Anda memiliki perubahan yang belum disimpan. Yakin ingin meninggalkan halaman?';
+            return e.returnValue;
+        }
+    });
+
+    // Reset flag on successful submit
+    form.addEventListener('submit', function() {
+        formChanged = false;
+        alertDiv.style.display = 'none';
+    });
+
+    // Also handle navigation clicks
+    document.querySelectorAll('a[href]').forEach(link => {
+        link.addEventListener('click', function(e) {
+            if (formChanged && !confirm('Anda memiliki perubahan yang belum disimpan. Yakin ingin meninggalkan halaman?')) {
+                e.preventDefault();
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

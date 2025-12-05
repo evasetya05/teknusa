@@ -1,0 +1,67 @@
+# === Python ===
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pdb
+*.egg-info/
+*.egg
+*.log
+
+# === Virtual Environment ===
+env/
+env*/        # mencakup env, envl, env1, env2, dll
+venv/
+venv*/
+.virtualenv/
+.virtualenv*/
+
+# Folder khusus yang Anda sebutkan
+envl/
+.envl/
+.envl
+
+# === Django ===
+db.sqlite3
+*.sqlite3
+*.sqlite3-journal
+
+# === Environment Variables ===
+.env
+*.env
+
+# === Migrations (optional, kalau tidak mau commit migrations) ===
+# **Note:** biasanya migrations tetap di-commit
+# */migrations/
+# */migrations/*
+
+# === Media & Static files ===
+media/
+staticfiles/
+static/
+
+# === VSCode ===
+.vscode/
+
+# === Byte-compiled / cache ===
+*.mo
+*.pot
+
+# === JetBrains (PyCharm) ===
+.idea/
+
+# === OS Files ===
+.DS_Store
+Thumbs.db
+
+# === Logs ===
+logs/
+*.log
+
+# === Compiled files ===
+*.so
+
+# === Backup files ===
+*.bak
+*.tmp
+*.swp
