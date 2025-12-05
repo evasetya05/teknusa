@@ -120,7 +120,8 @@ def channel_analytics(request):
         # --- Pengelompokan per jenis channel ---
         grouped_channels = {}
         for ch in channels:
-            grouped_channels.setdefault(ch.channel.name, []).append(ch)
+            channel_name = ch.channel.name if ch.channel else "Unknown"
+            grouped_channels.setdefault(channel_name, []).append(ch)
 
         # --- Sorting setiap group berdasarkan tanggal posting terbaru ---
         for key in grouped_channels:
