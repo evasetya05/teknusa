@@ -7,11 +7,11 @@ from django.core.validators import MinValueValidator
 
 class Channel(models.Model):
 
-    akun = models.ForeignKey(Akun, on_delete=models.CASCADE)
-    for_market = models.ForeignKey(Market, on_delete=models.CASCADE)
-    channel = models.ForeignKey(DigitalChannel, on_delete=models.CASCADE)
-    funnel_stage = models.ForeignKey(FunnelStage, on_delete=models.CASCADE)
-    kategori_biaya = models.ForeignKey(Biaya, on_delete=models.CASCADE)
+    akun = models.ForeignKey(Akun, on_delete=models.CASCADE, null=True, blank=True)
+    for_market = models.ForeignKey(Market, on_delete=models.CASCADE, null=True, blank=True)
+    channel = models.ForeignKey(DigitalChannel, on_delete=models.CASCADE, null=True, blank=True)
+    funnel_stage = models.ForeignKey(FunnelStage, on_delete=models.CASCADE, null=True, blank=True)
+    kategori_biaya = models.ForeignKey(Biaya, on_delete=models.CASCADE, null=True, blank=True)
     amount = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True, verbose_name="Nilai Biaya")
     rencana_tanggal_posting = models.DateField(null=True, blank=True)
     tanggal_posting = models.DateTimeField(null=True, blank=True)
