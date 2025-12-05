@@ -33,9 +33,6 @@ db.sqlite3
 
 
 # === Media & Static files ===
-media/
-staticfiles/
-static/
 
 # === VSCode ===
 .vscode/
