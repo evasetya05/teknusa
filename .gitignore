@@ -30,10 +30,7 @@ db.sqlite3
 .env
 *.env
 
-# === Migrations (optional, kalau tidak mau commit migrations) ===
-# **Note:** biasanya migrations tetap di-commit
-# */migrations/
-# */migrations/*
+
 
 # === Media & Static files ===
 media/
