@@ -80,7 +80,7 @@ def channel_edit(request, pk):
         form = ChannelForm(request.POST, instance=channel)
         if form.is_valid():
             form.save()
-            return redirect('post_media:channel_detail', pk=channel.pk)
+            return redirect('post_media:channel_list')
     else:
         form = ChannelForm(instance=channel)
     return render(request, 'post_media/channel_form.html', {'form': form, 'title': 'Edit Channel'})
