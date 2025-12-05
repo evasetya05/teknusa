@@ -1,16 +1,17 @@
 from django.contrib import admin
 from post_media.models import Channel, ChannelPerformance
+from post_media.models.for_market import Akun, Market, DigitalChannel, FunnelStage, Biaya
 
 
 @admin.register(Channel)
 class ChannelAdmin(admin.ModelAdmin):
     list_display = (
-        'judul', 'channel', 'akun', 'for_market', 
-        'funnel_stage', 'kategori_biaya', 
+        'judul', 'jenis_konten', 'channel', 'akun', 'for_market', 
+        'funnel_stage', 'kategori_biaya', 'amount',
         'rencana_tanggal_posting', 'tanggal_posting', 'is_posted'
     )
-    list_filter = ('akun', 'channel', 'funnel_stage', 'is_posted', 'for_market')
-    search_fields = ('judul', 'jenis_konten', 'kategori_biaya')
+    list_filter = ('akun', 'channel', 'funnel_stage', 'is_posted', 'for_market', 'jenis_konten')
+    search_fields = ('judul', 'jenis_konten', 'isi_konten', 'akun__name', 'channel__name')
     date_hierarchy = 'tanggal_posting'
     ordering = ('-tanggal_posting',)
     readonly_fields = ('created_at', 'updated_at')
@@ -20,7 +21,7 @@ class ChannelAdmin(admin.ModelAdmin):
             'fields': ('judul', 'jenis_konten', 'isi_konten')
         }),
         ('Detail Channel', {
-            'fields': ('akun', 'for_market', 'channel', 'funnel_stage', 'kategori_biaya')
+            'fields': ('akun', 'for_market', 'channel', 'funnel_stage', 'kategori_biaya', 'amount')
         }),
         ('Status & Tanggal', {
             'fields': ('rencana_tanggal_posting', 'tanggal_posting', 'is_posted')
@@ -49,11 +50,36 @@ class ChannelPerformanceAdmin(admin.ModelAdmin):
     show_metrics.short_description = "Metrics (Preview)"
 
 
-from django.contrib import admin
-from post_media.models.for_market import Market
+@admin.register(Akun)
+class AkunAdmin(admin.ModelAdmin):
+    list_display = ('name', 'description')
+    search_fields = ('name',)
+    list_filter = ('name',)
 
 
 @admin.register(Market)
 class MarketAdmin(admin.ModelAdmin):
-    name = ('name')
-    description = ('description')
+    list_display = ('name', 'description')
+    search_fields = ('name',)
+    list_filter = ('name',)
+
+
+@admin.register(DigitalChannel)
+class DigitalChannelAdmin(admin.ModelAdmin):
+    list_display = ('name', 'description')
+    search_fields = ('name',)
+    list_filter = ('name',)
+
+
+@admin.register(FunnelStage)
+class FunnelStageAdmin(admin.ModelAdmin):
+    list_display = ('name', 'description')
+    search_fields = ('name',)
+    list_filter = ('name',)
+
+
+@admin.register(Biaya)
+class BiayaAdmin(admin.ModelAdmin):
+    list_display = ('name', 'description')
+    search_fields = ('name',)
+    list_filter = ('name',)
