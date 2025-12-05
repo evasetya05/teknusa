@@ -23,7 +23,7 @@ DATABASES = {
     }
 }
 
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
 
 # Email configuration for production
 EMAIL_BACKEND = "django_amazon_ses.EmailBackend"
