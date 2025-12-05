@@ -53,7 +53,7 @@
           {% for item in market_data.channels %}
             <tr>
               <td data-label="Judul">
-                <a href="{% url 'post_media:channel_edit' item.obj.pk %}" class="judul-link">
+                <a href="{% url 'post_media:channel_detail' item.obj.pk %}" class="judul-link">
                   {{ item.obj.judul }}
                 </a>
               </td>

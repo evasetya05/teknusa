@@ -1,7 +1,7 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from post_media.models.channel import Channel, ChannelPerformance
 from post_media.forms import ChannelForm
-from post_media.models.for_market import Market
+from post_media.models.for_market import Market, DigitalChannel
 from collections import defaultdict
 from django.db.models import Prefetch
 from django.utils.timezone import now
@@ -13,9 +13,24 @@ from django.http import HttpResponse
 
 def channel_list(request):
     markets = Market.objects.all()
+    digital_channels = DigitalChannel.objects.all()
+    
+    # Get filter parameters
+    selected_market = request.GET.get('market', '')
+    selected_channel = request.GET.get('channel', '')
+    
     market_channels = []
     for market in markets:
+        # Apply market filter if selected
+        if selected_market and market.name != selected_market:
+            continue
+            
         channels = Channel.objects.filter(for_market=market)
+        
+        # Apply channel filter if selected
+        if selected_channel:
+            channels = channels.filter(channel__name=selected_channel)
+        
         if channels.exists():
             grouped_by_channel = {}
             for ch in channels:
@@ -29,12 +44,19 @@ def channel_list(request):
                 unposted.sort(key=lambda c: (c.rencana_tanggal_posting is not None, c.rencana_tanggal_posting), reverse=True)
                 posted.sort(key=lambda c: (c.tanggal_posting is not None, c.tanggal_posting), reverse=True)
                 grouped_by_channel[key] = unposted + posted
+
             market_channels.append({
                 'market': market,
                 'grouped_channels': grouped_by_channel
             })
 
-    context = {'market_channels': market_channels}
+    context = {
+        'market_channels': market_channels, 
+        'markets': markets, 
+        'digital_channels': digital_channels, 
+        'selected_market': selected_market, 
+        'selected_channel': selected_channel
+    }
     return render(request, 'post_media/channel_list.html', context)
 
 
