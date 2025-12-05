@@ -109,10 +109,10 @@ TEMPLATES = [
 ]
 
 STATIC_URL = "/static/"
-STATIC_ROOT = "/home/teknusas/teknusa.com/staticfiles"
+STATIC_ROOT = "/home/teknusas/teknusa.com/static"
 
 
-STATICFILES_DIRS = [os.path.join(PROJECT_ROOT, "static")]
+
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 MEDIA_URL = "/media/"
