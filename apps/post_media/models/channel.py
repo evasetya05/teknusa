@@ -57,7 +57,7 @@ class ChannelPerformance(models.Model):
             'tiktok': {'views': 'Views', 'hearts': 'Hearts', 'comments': 'Comments', 'shares': 'Shares'},
             'blog': {'views': 'Views', 'comments': 'Comments', 'clicks': 'Clicks'},
         }
-        platform = (self.channel.channel or '').lower()
+        platform = (self.channel.channel.name or '').lower() if self.channel.channel else ''
         return labels.get(platform, {}).get(key, key)
 
     def get_metrics_labeled(self):

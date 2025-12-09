@@ -8,7 +8,7 @@ ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.mysql",
-        "NAME": "tes_teknusa",
+        "NAME": "teknusa_dev",
         "USER": "eva",
         "PASSWORD": "abc",
         "HOST": "localhost",
