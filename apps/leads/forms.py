@@ -42,7 +42,7 @@ class LeadForm(forms.ModelForm):
             if self.is_bound and name in self.errors:
                 widget.attrs['class'] = f"{widget.attrs['class']} is-invalid".strip()
 
-InteractionFormSet = inlineformset_factory(Lead, Interaction, fields=['note'], extra=1, can_delete=True)
+InteractionFormSet = inlineformset_factory(Lead, Interaction, fields=['note'], extra=1, can_delete=False)
 
 class InteractionForm(forms.ModelForm):
     class Meta:
