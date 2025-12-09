@@ -10,7 +10,8 @@ class Lead(models.Model):
         ('referral', 'Referral'),
         ('fb_ads', 'FB Ads'),
         ('teknusa', 'Teknusa'),
-        ('Self', 'Self'),
+        ('elf', 'Self'),
+        ('threads', 'Threads'),
         ('other', 'Other'),
     ]
 
