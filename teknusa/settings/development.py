@@ -10,7 +10,7 @@ DATABASES = {
         "ENGINE": "django.db.backends.mysql",
         "NAME": "teknusa_dev",
         "USER": "eva",
-        "PASSWORD": "abc",
+        "PASSWORD": "toor",
         "HOST": "localhost",
         "PORT": "3306",
         "OPTIONS": {"charset": "utf8mb4"},
