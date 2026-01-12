@@ -16,7 +16,7 @@ def closing_period_list(request):
         current_period = timezone.now().strftime('%Y-%m')
         ClosingPeriod.objects.create(period=current_period, is_closed=False)
         messages.info(request, f"Periode awal {current_period} dibuat otomatis.")
-        return redirect('closing_period_list')
+        return redirect('ledger:closing_period_list')
 
     # Pastikan minimal satu periode open
     if not ClosingPeriod.objects.filter(is_closed=False).exists():
@@ -27,7 +27,7 @@ def closing_period_list(request):
         else:
             period_obj.is_closed = False
             period_obj.save()
-        return redirect('closing_period_list')
+        return redirect('ledger:closing_period_list')
 
     return render(request, 'ledger/closing_period_list.html', {'periods': periods})
 
@@ -41,7 +41,7 @@ def close_period(request, period):
 
     if period_obj.is_closed:
         messages.warning(request, f"Periode {period} sudah tertutup.")
-        return redirect('closing_period_list')
+        return redirect('ledger:closing_period_list')
 
     # Tutup periode saat ini
     period_obj.is_closed = True
@@ -63,7 +63,7 @@ def close_period(request, period):
         next_month = (current_date + relativedelta(months=1)).strftime("%Y-%m")
     except ValueError:
         messages.error(request, "Format periode tidak valid. Gunakan YYYY-MM.")
-        return redirect('closing_period_list')
+        return redirect('ledger:closing_period_list')
 
     next_period, created = ClosingPeriod.objects.get_or_create(period=next_month)
     if created or next_period.is_closed:
@@ -75,7 +75,7 @@ def close_period(request, period):
     else:
         messages.info(request, f"Periode {period} ditutup. Periode {next_month} sudah aktif.")
 
-    return redirect('closing_period_list')
+    return redirect('ledger:closing_period_list')
 
 
 # ==========================================================
