@@ -53,6 +53,7 @@ urlpatterns = [
     path('lean/', include('lean.urls')),
     path('ledger/', include('ledger.urls')),
     path('post_media/', include('post_media.urls')),
+    path('game/', include('apps.game.urls')), 
     path('search/', include('haystack.urls'), name='search'),
     path('ckeditor/', include(ckeditor_urls)),  # Ensure ckeditor URLs are included
     path('ckeditor/upload/', ckeditor_uploader_views.upload, name='ckeditor_upload'),

@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Sawit Adventure</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+body{margin:0;text-align:center;background:#e8f8df;font-family:Arial}
+canvas{background:#b7e4a5;border:3px solid #2e7d32;display:block;margin:auto}
+
+#controls{
+ position:fixed;bottom:10px;width:100%;
+ display:flex;justify-content:space-around;
+}
+.btn{
+ background:#2e7d32;color:white;
+ border:none;border-radius:50%;
+ width:60px;height:60px;font-size:20px;
+}
+</style>
+</head>
+<body>
+
+<h3>🌴 Sawit Adventure — Tantangan Industri 🌰</h3>
+
+Nama: <input id="playerName" value="Player">
+<button onclick="startGame()">Mulai</button>
+
+<canvas id="game" width="360" height="320"></canvas>
+
+<div id="controls">
+<button class="btn" id="left">⬅️</button>
+<button class="btn" id="jump">⬆️</button>
+<button class="btn" id="right">➡️</button>
+</div>
+
+<script>
+const canvas=document.getElementById("game");
+const ctx=canvas.getContext("2d");
+
+let camX=0, running=false, score=0;
+
+let player={x:40,y:230,w:32,h:32,vy:0,onGround:false};
+
+let gravity=0.8, speed=2.5;
+
+/* ===== MAP ===== */
+let ground=[{x:0,y:270,w:2000,h:60}];
+
+let platforms=[
+ {x:200,y:210,w:80,h:12},
+ {x:350,y:170,w:80,h:12},
+ {x:520,y:210,w:80,h:12},
+ {x:750,y:190,w:100,h:12},
+ {x:980,y:220,w:80,h:12},
+ {x:1200,y:180,w:100,h:12},
+];
+
+/* ===== ITEM SAWIT ===== */
+let items=[
+ {x:220,y:180,emoji:"🌰",name:"TBS",taken:false},
+ {x:380,y:140,emoji:"🪙",name:"Bonus Panen",taken:false},
+ {x:560,y:180,emoji:"⚙️",name:"Alat Panen",taken:false},
+ {x:800,y:160,emoji:"🌰",name:"TBS",taken:false},
+ {x:1020,y:190,emoji:"📦",name:"Pupuk",taken:false},
+];
+
+/* ===== MUSUH (KENDALA) ===== */
+let enemies=[
+ {x:300,y:230,emoji:"🐛",name:"Hama",alive:true},
+ {x:600,y:230,emoji:"💸",name:"Cashflow",alive:true},
+ {x:900,y:230,emoji:"📄",name:"Audit",alive:true},
+ {x:1150,y:230,emoji:"😵‍💫",name:"SDM",alive:true},
+];
+
+let moveL=false, moveR=false, jump=false;
+
+/* ===== BUTTON CONTROL ===== */
+document.getElementById("left").ontouchstart=()=>moveL=true;
+document.getElementById("left").ontouchend=()=>moveL=false;
+document.getElementById("right").ontouchstart=()=>moveR=true;
+document.getElementById("right").ontouchend=()=>moveR=false;
+document.getElementById("jump").ontouchstart=()=>jump=true;
+document.getElementById("jump").ontouchend=()=>jump=false;
+
+document.addEventListener("keydown",e=>{
+ if(e.code==="ArrowLeft")moveL=true;
+ if(e.code==="ArrowRight")moveR=true;
+ if(e.code==="ArrowUp")jump=true;
+});
+document.addEventListener("keyup",e=>{
+ if(e.code==="ArrowLeft")moveL=false;
+ if(e.code==="ArrowRight")moveR=false;
+ if(e.code==="ArrowUp")jump=false;
+});
+
+/* ===== GAME ===== */
+
+function startGame(){
+ running=true; score=0; camX=0;
+ player.x=40; player.y=230; player.vy=0;
+ enemies.forEach(e=>e.alive=true);
+ items.forEach(i=>i.taken=false);
+}
+
+function update(){
+ if(!running) return;
+
+ if(moveR) player.x+=speed;
+ if(moveL && player.x>0) player.x-=speed;
+
+ if(jump && player.onGround){
+   player.vy=-12; player.onGround=false;
+ }
+
+ player.vy+=gravity;
+ player.y+=player.vy;
+
+ player.onGround=false;
+
+ [...ground,...platforms].forEach(p=>{
+  if(player.x+player.w>p.x && player.x<p.x+p.w &&
+     player.y+player.h>p.y && player.y+player.h<p.y+p.h+10 &&
+     player.vy>=0){
+       player.y=p.y-player.h;
+       player.vy=0;
+       player.onGround=true;
+  }
+ });
+
+ enemies.forEach(e=>{
+  if(!e.alive) return;
+  if(player.x<e.x+32 && player.x+32>e.x &&
+     player.y<e.y+32 && player.y+32>e.y){
+      if(player.vy>0){
+        e.alive=false; player.vy=-8; score+=30;
+      }else{
+        running=false; sendScore();
+        alert("Game Over!\nKena: "+e.name+"\nSkor: "+score);
+      }
+  }
+ });
+
+ items.forEach(i=>{
+  if(i.taken) return;
+  if(player.x<i.x+24 && player.x+32>i.x &&
+     player.y<i.y+24 && player.y+32>i.y){
+       i.taken=true; score+=15;
+  }
+ });
+
+ camX = player.x - 80;
+ if(camX<0) camX=0;
+}
+
+function draw(){
+ ctx.clearRect(0,0,360,320);
+
+ ctx.fillStyle="#4caf50";
+ ground.forEach(p=>ctx.fillRect(p.x-camX,p.y,p.w,p.h));
+ ctx.fillStyle="#388e3c";
+ platforms.forEach(p=>ctx.fillRect(p.x-camX,p.y,p.w,p.h));
+
+ ctx.font="32px serif";
+ ctx.fillText("🌴",player.x-camX,player.y+30);
+
+ enemies.forEach(e=>{
+  if(e.alive){
+    ctx.fillText(e.emoji,e.x-camX,e.y+30);
+    ctx.font="10px Arial";
+    ctx.fillText(e.name,e.x-camX,e.y-2);
+    ctx.font="32px serif";
+  }
+ });
+
+ items.forEach(i=>{
+  if(!i.taken){
+    ctx.fillText(i.emoji,i.x-camX,i.y+24);
+    ctx.font="10px Arial";
+    ctx.fillText(i.name,i.x-camX-5,i.y-2);
+    ctx.font="32px serif";
+  }
+ });
+
+ ctx.font="14px Arial";
+ ctx.fillText("Skor: "+score,10,20);
+}
+
+function loop(){update();draw();requestAnimationFrame(loop);}
+loop();
+
+/* ===== SEND SCORE ===== */
+function sendScore(){
+ fetch("/game/save-score/",{
+  method:"POST",
+  headers:{"Content-Type":"application/json"},
+  body:JSON.stringify({
+    name:document.getElementById("playerName").value,
+    score:score,
+    level:1
+  })
+ });
+}
+</script>
+</body>
+</html>
