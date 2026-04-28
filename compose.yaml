@@ -1,0 +1,137 @@
+version: '3.8'
+
+services:
+  db:
+    image: mysql:8.0
+    container_name: teknusa_mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpassword123}
+      MYSQL_DATABASE: teknusas_teknusa
+      MYSQL_USER: teknusas_teknusa
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-@Pontianak123}
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./mysql.cnf:/etc/mysql/conf.d/mysql.cnf:ro
+    networks:
+      - teknusa_network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: teknusa_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - teknusa_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: teknusa_web
+    restart: unless-stopped
+    environment:
+      - DEBUG=${DEBUG:-False}
+      - SECRET_KEY=${SECRET_KEY:-django-insecure-1234567890}
+      - DJANGO_SETTINGS_MODULE=teknusa.settings.production
+      - DB_HOST=db
+      - DB_NAME=teknusas_teknusa
+      - DB_USER=teknusas_teknusa
+      - DB_PASSWORD=${MYSQL_PASSWORD:-@Pontianak123}
+      - DB_PORT=3306
+      - REDIS_URL=redis://redis:6379/0
+      - AWS_SES_REGION=${AWS_SES_REGION}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - SERVICE_EMAIL_ADDRESS=${SERVICE_EMAIL_ADDRESS}
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS:-teknusa.com,www.teknusa.com,localhost,127.0.0.1}
+    ports:
+      - "8002:8000"
+    volumes:
+      - ./media:/app/media
+      - ./staticfiles:/app/staticfiles
+      - ./whoosh_index:/app/whoosh_index
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - teknusa_network
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py collectstatic --noinput &&
+             python manage.py runserver 0.0.0.0:8000"
+
+  
+  celery:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: teknusa_celery
+    restart: unless-stopped
+    environment:
+      - DEBUG=${DEBUG:-False}
+      - SECRET_KEY=${SECRET_KEY:-django-insecure-1234567890}
+      - DB_HOST=db
+      - DB_NAME=teknusas_teknusa
+      - DB_USER=teknusas_teknusa
+      - DB_PASSWORD=${MYSQL_PASSWORD:-@Pontianak123}
+      - REDIS_URL=redis://redis:6379/0
+    volumes:
+      - ./media:/app/media
+      - ./whoosh_index:/app/whoosh_index
+    depends_on:
+      - db
+      - redis
+    networks:
+      - teknusa_network
+    command: python -m celery -A teknusa worker -l info
+
+  celery-beat:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: teknusa_celery_beat
+    restart: unless-stopped
+    environment:
+      - DEBUG=${DEBUG:-False}
+      - SECRET_KEY=${SECRET_KEY:-django-insecure-1234567890}
+      - DB_HOST=db
+      - DB_NAME=teknusas_teknusa
+      - DB_USER=teknusas_teknusa
+      - DB_PASSWORD=${MYSQL_PASSWORD:-@Pontianak123}
+      - REDIS_URL=redis://redis:6379/0
+    volumes:
+      - ./media:/app/media
+      - ./celerybeat-schedule:/app/celerybeat-schedule
+    depends_on:
+      - db
+      - redis
+    networks:
+      - teknusa_network
+    command: python -m celery -A teknusa beat -l info --schedule=/app/celerybeat-schedule/celerybeat-schedule
+
+volumes:
+  mysql_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  teknusa_network:
+    driver: bridge

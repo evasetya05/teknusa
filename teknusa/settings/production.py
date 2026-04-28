@@ -3,7 +3,7 @@ import os
 
 DEBUG = True  # Production should have DEBUG=False
 
-ALLOWED_HOSTS = ["teknusa.com", "www.teknusa.com"]
+ALLOWED_HOSTS = ["teknusa.com", "www.teknusa.com", "localhost", "127.0.0.1"]
 
 
 # Use environment variable for SECRET_KEY in production
@@ -15,11 +15,11 @@ pymysql.install_as_MySQLdb()
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.mysql",
-        "NAME": "teknusas_teknusa",
-        "USER": "teknusas_teknusa",
-        "PASSWORD": "@Pontianak123",
-        "HOST": "localhost",
-        "PORT": "3306",
+        "NAME": os.getenv("DB_NAME", "teknusas_teknusa"),
+        "USER": os.getenv("DB_USER", "teknusas_teknusa"),
+        "PASSWORD": os.getenv("DB_PASSWORD", "@Pontianak123"),
+        "HOST": os.getenv("DB_HOST", "localhost"),
+        "PORT": os.getenv("DB_PORT", "3306"),
         "OPTIONS": {"charset": "utf8mb4"},
     }
 }
