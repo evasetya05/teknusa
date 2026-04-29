@@ -61,7 +61,7 @@ services:
       - SERVICE_EMAIL_ADDRESS=${SERVICE_EMAIL_ADDRESS}
       - ALLOWED_HOSTS=${ALLOWED_HOSTS:-teknusa.com,www.teknusa.com,localhost,127.0.0.1}
     ports:
-      - "8003:8000"
+      - "8002:8000"
     volumes:
       - ./media:/app/media
       - ./staticfiles:/app/staticfiles
