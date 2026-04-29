@@ -59,7 +59,7 @@ services:
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
       - SERVICE_EMAIL_ADDRESS=${SERVICE_EMAIL_ADDRESS}
-      - ALLOWED_HOSTS=${ALLOWED_HOSTS:-teknusa.com,www.teknusa.com,localhost,127.0.0.1}
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS:-teknusa.com,www.teknusa.com,localhost,127.0.0.1,192.168.18.111}
     ports:
       - "8002:8000"
     volumes:
