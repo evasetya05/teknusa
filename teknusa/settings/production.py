@@ -5,6 +5,7 @@ DEBUG = True  # Production should have DEBUG=False
 
 ALLOWED_HOSTS = ["teknusa.com", "www.teknusa.com", "localhost", "127.0.0.1"]
 
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 # Use environment variable for SECRET_KEY in production
 SECRET_KEY = os.getenv("SECRET_KEY", "your-production-secret-key-here-change-this")
