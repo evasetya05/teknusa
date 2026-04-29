@@ -7,16 +7,19 @@ import pymysql
 pymysql.install_as_MySQLdb()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-PROJECT_ROOT = BASE_DIR.parent  # Go up one level to reach root directory
+# settings.py is flat (teknusa/settings.py), so BASE_DIR = /app
 
-sys.path.insert(0, os.path.join(PROJECT_ROOT, 'apps'))
-sys.path.insert(0, os.path.join(PROJECT_ROOT, 'extra_apps'))
+sys.path.insert(0, os.path.join(BASE_DIR, 'apps'))
+sys.path.insert(0, os.path.join(BASE_DIR, 'extra_apps'))
 
 SECRET_KEY = os.getenv("SECRET_KEY", "django-insecure-1234567890")
 
-DEBUG = False   # default False, override via dev.py
+DEBUG = os.getenv("DEBUG", "False") == "True"
 
-ALLOWED_HOSTS = []
+_allowed = os.getenv("ALLOWED_HOSTS", "teknusa.com,www.teknusa.com,localhost,127.0.0.1,192.168.18.111")
+ALLOWED_HOSTS = [h.strip() for h in _allowed.split(",") if h.strip()]
+
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 LANGUAGE_CODE = "en-us"
 TIME_ZONE = "UTC"
@@ -35,7 +38,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     'django.contrib.humanize',
-    
+
     'comment',
     'notice',
     'setting',
@@ -95,7 +98,7 @@ WSGI_APPLICATION = "teknusa.wsgi.application"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [os.path.join(PROJECT_ROOT, "templates")],
+        "DIRS": [os.path.join(BASE_DIR, "templates")],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -109,18 +112,27 @@ TEMPLATES = [
     }
 ]
 
-
+# Database - MariaDB via PyMySQL
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.mysql",
+        "NAME": os.getenv("DB_NAME", "teknusas_teknusa"),
+        "USER": os.getenv("DB_USER", "teknusas_teknusa"),
+        "PASSWORD": os.getenv("DB_PASSWORD", "@Pontianak123"),
+        "HOST": os.getenv("DB_HOST", "localhost"),
+        "PORT": os.getenv("DB_PORT", "3306"),
+        "OPTIONS": {"charset": "utf8mb4"},
+    }
+}
 
 STATIC_URL = "/static/"
-STATIC_ROOT = '/home/teknusas/teknusa.com/staticfiles'
-STATICFILES_DIRS = [os.path.join(PROJECT_ROOT, "static")]
-
-
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+STATICFILES_DIRS = [os.path.join(BASE_DIR, "static")]
 
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 MEDIA_URL = "/media/"
-MEDIA_ROOT = os.path.join(PROJECT_ROOT, "media")
+MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
@@ -176,7 +188,6 @@ DATE_TIME_FORMAT = '%Y-%m-%d'
 
 SILENCED_SYSTEM_CHECKS = ['mysql.E001']
 
-# Haystack
 DJANGO_NOTIFICATIONS_CONFIG = {
     'USE_JSONFIELD': True
 }
@@ -189,7 +200,7 @@ LIKES_MODELS = {
     "blog.Article": {
         'serializer': 'article.api.serializers.ArticleSerializer'
     },
-    "careers.Job": { },
+    "careers.Job": {},
 }
 
 UNICODE_JSON = True
@@ -211,21 +222,17 @@ LANGUAGES = [
 STATICFILES_FINDERS = (
     'django.contrib.staticfiles.finders.FileSystemFinder',
     'django.contrib.staticfiles.finders.AppDirectoriesFinder',
-    # other
     'compressor.finders.CompressorFinder',
 )
 
 COMPRESS_ENABLED = True
-# COMPRESS_OFFLINE = True
 
 COMPRESS_CSS_FILTERS = [
-    # creates absolute urls from relative ones
     'compressor.filters.css_default.CssAbsoluteFilter',
-    # css minimizer
-    'compressor.filters.cssmin.CSSMinFilter'
+    'compressor.filters.cssmin.CSSMinFilter',
 ]
 COMPRESS_JS_FILTERS = [
-    'compressor.filters.jsmin.JSMinFilter'
+    'compressor.filters.jsmin.JSMinFilter',
 ]
 
 COOKIE_CONSENT_NAME = "cookie_consent"
@@ -236,15 +243,13 @@ FAILED_JOB_THRESHOLD = 20
 ACTIVE_JOB_THRESHOLD = 50
 ACTIVE_WORKER_THRESHOLD = 5
 
-# AWS Storage config (optional)
-# AWS_PUBLIC_MEDIA_LOCATION = os.environ.get('AWS_PUBLIC_MEDIA_LOCATION')
-# AWS_STATIC_LOCATION = 'static'
-# AWS_PRIVATE_MEDIA_LOCATION = os.environ.get('AWS_PRIVATE_MEDIA_LOCATION')
-# AWS_DEFAULT_ACL = None
-
-# Email configuration (will be overridden in production)
+# Email
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+AWS_SES_REGION = os.getenv("AWS_SES_REGION")
+AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID")
+AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
+SERVICE_EMAIL_ADDRESS = os.getenv('SERVICE_EMAIL_ADDRESS')
 
-# One Signal (optional)
-# ONE_SIGNAL_APP_ID = os.environ.get('ONE_SIGNAL_APP_ID')
-# ONE_SIGNAL_API_KEY = os.environ.get('ONE_SIGNAL_API_KEY')
+# Security
+SECURE_BROWSER_XSS_FILTER = True
+SECURE_CONTENT_TYPE_NOSNIFF = True

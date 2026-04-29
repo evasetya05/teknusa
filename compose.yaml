@@ -48,7 +48,7 @@ services:
     environment:
       - DEBUG=${DEBUG:-False}
       - SECRET_KEY=${SECRET_KEY:-django-insecure-1234567890}
-      - DJANGO_SETTINGS_MODULE=teknusa.settings.production
+      - DJANGO_SETTINGS_MODULE=teknusa.settings
       - DB_HOST=db
       - DB_NAME=teknusas_teknusa
       - DB_USER=teknusas_teknusa
