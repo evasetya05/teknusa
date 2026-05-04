@@ -5,9 +5,9 @@ app_name = "accounts"
 
 urlpatterns = [
     # login, register, logout cukup panggil as_view() tanpa parameter
-    re_path(r'^login/$', views.LoginView.as_view(), name='login'),
-    re_path(r'^register/$', views.RegisterView.as_view(), name='register'),
-    re_path(r'^logout/$', views.LogoutView.as_view(), name='logout'),
+    path('login/', views.LoginView.as_view(), name='login'),
+    path('register/', views.RegisterView.as_view(), name='register'),
+    path('logout/', views.LogoutView.as_view(), name='logout'),
 
     # URL statis tanpa regex
     path('account/result.html', views.account_result, name='result'),
