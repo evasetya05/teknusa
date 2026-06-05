@@ -240,3 +240,30 @@ def lead_graphic(request):
     }
     
     return render(request, 'leads/lead_graphic.html', context)
+
+from django.http import JsonResponse
+from django.urls import reverse
+
+def lead_calendar(request):
+    return render(request, 'leads/lead_calendar.html')
+
+def lead_calendar_events(request):
+    current_entity_id = request.session.get('current_entity_id')
+    leads = Lead.objects.filter(next_follow_up__isnull=False)
+    
+    if current_entity_id and current_entity_id != 'all':
+        leads = leads.filter(entity_id=current_entity_id)
+    
+    events = []
+    for lead in leads:
+        events.append({
+            'title': f'Follow-up: {lead.name}',
+            'start': lead.next_follow_up.isoformat(),
+            'url': reverse('leads:lead_detail', args=[lead.pk]),
+            'allDay': True,
+            'backgroundColor': '#2563eb' if lead.status != 'won' else '#10b981',
+            'borderColor': '#2563eb' if lead.status != 'won' else '#10b981',
+            'textColor': '#ffffff'
+        })
+    
+    return JsonResponse(events, safe=False)

@@ -10,4 +10,6 @@ urlpatterns = [
     path('lead/<int:pk>/edit/', views.lead_edit, name='lead_edit'),
     path('analysis/', views.lead_analysis, name='lead_analysis'),
     path('graphic/', views.lead_graphic, name='lead_graphic'),
+    path('calendar/', views.lead_calendar, name='lead_calendar'),
+    path('calendar/events/', views.lead_calendar_events, name='lead_calendar_events'),
 ]

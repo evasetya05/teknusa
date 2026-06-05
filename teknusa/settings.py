@@ -57,6 +57,7 @@ INSTALLED_APPS = [
     'lean',
     'ledger',
     'post_media',
+    'kanban',
     'apps.game.apps.GameConfig',
 
     'haystack',

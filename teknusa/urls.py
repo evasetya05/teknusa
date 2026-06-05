@@ -54,6 +54,7 @@ urlpatterns = [
     path('ledger/', include('ledger.urls')),
     path('entity/', include('entity.urls', namespace='entity')),
     path('post_media/', include('post_media.urls')),
+    path('kanban/', include('kanban.urls', namespace='kanban')),
     path('game/', include('apps.game.urls')), 
 
     path('search/', include('haystack.urls'), name='search'),

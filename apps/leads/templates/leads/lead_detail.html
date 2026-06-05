@@ -250,7 +250,11 @@
             <i class="fas fa-calendar-check"></i>
             <div>
                 <small class="text-muted d-block">Follow-up Berikutnya</small>
-                {% if lead.next_follow_up %}{{ lead.next_follow_up|date:"d M Y" }}{% else %}Belum dijadwalkan{% endif %}
+                {% if lead.next_follow_up %}
+                    <a href="{% url 'leads:lead_calendar' %}" class="text-decoration-none">{{ lead.next_follow_up|date:"d M Y" }}</a>
+                {% else %}
+                    Belum dijadwalkan
+                {% endif %}
             </div>
         </div>
         <div class="stat-chip">
