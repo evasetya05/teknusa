@@ -179,6 +179,15 @@
             </div>
             <div class="col-md-6">
                 <div class="form-floating">
+                    {{ form.entity }}
+                    <label for="{{ form.entity.id_for_label }}">Perusahaan (Internal)</label>
+                    {% if form.entity.errors %}
+                        <div class="invalid-feedback d-block">{{ form.entity.errors|striptags }}</div>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="form-floating">
                     {{ form.status }}
                     <label for="{{ form.status.id_for_label }}">Status</label>
                     {% if form.status.errors %}
