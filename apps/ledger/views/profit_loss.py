@@ -2,17 +2,26 @@ from django.shortcuts import render
 from ledger.models import Account, JournalItem, ClosingPeriod
 
 
+def _get_entity_from_session(request):
+    eid = request.session.get('current_entity_id')
+    if not eid or eid == 'all':
+        return None
+    try:
+        from entity.models import Entity
+        return Entity.objects.get(id=eid, is_active=True)
+    except Exception:
+        return None
+
+
 def profit_and_loss_report(request):
     """
     Profit & Loss:
     - mode=period → per periode closing (bulanan)
     - mode=year   → per tahun
     """
+    current_entity = _get_entity_from_session(request)
 
-    # ==========================
-    # PARAMETER
-    # ==========================
-    mode = request.GET.get('mode', 'period')   # 'period' | 'year'
+    mode = request.GET.get('mode', 'period')
     selected_period = request.GET.get('period')
     selected_year = request.GET.get('year')
 
@@ -21,33 +30,37 @@ def profit_and_loss_report(request):
     total_income = 0
     total_expense = 0
 
-    # ==========================
-    # DATA PERIODE
-    # ==========================
-    closing_periods = ClosingPeriod.objects.filter(is_closed=True).order_by('-period')
+    closing_periods_qs = ClosingPeriod.objects.filter(is_closed=True)
+    if current_entity:
+        closing_periods_qs = closing_periods_qs.filter(entity=current_entity)
+    closing_periods = closing_periods_qs.order_by('-period')
 
     if mode == 'period':
         if not selected_period and closing_periods.exists():
             selected_period = closing_periods.first().period
 
         # validasi: hanya boleh periode closed
-        if not ClosingPeriod.objects.filter(period=selected_period, is_closed=True).exists():
+        check_qs = ClosingPeriod.objects.filter(period=selected_period, is_closed=True)
+        if current_entity:
+            check_qs = check_qs.filter(entity=current_entity)
+        if not check_qs.exists():
             selected_period = None
 
-    # ==========================
-    # AKUN
-    # ==========================
-    income_accounts = Account.objects.filter(account_type='INCOME', active=True)
-    expense_accounts = Account.objects.filter(account_type='EXPENSES', active=True)
+    account_filter = {'active': True}
+    if current_entity:
+        account_filter['entity'] = current_entity
 
-    # ==========================
-    # FILTER TRANSAKSI
-    # ==========================
+    income_accounts = Account.objects.filter(account_type='INCOME', **account_filter)
+    expense_accounts = Account.objects.filter(account_type='EXPENSES', **account_filter)
+
     def get_items(account):
         qs = JournalItem.objects.filter(
             account=account,
             journal_entry__is_posted=True
         ).select_related('journal_entry').order_by('journal_entry__date', 'id')
+
+        if current_entity:
+            qs = qs.filter(journal_entry__entity=current_entity)
 
         if mode == 'year' and selected_year:
             qs = qs.filter(journal_entry__date__year=selected_year)
@@ -58,9 +71,6 @@ def profit_and_loss_report(request):
 
         return qs
 
-    # ==========================
-    # PENDAPATAN
-    # ==========================
     for account in income_accounts:
         items = get_items(account)
 
@@ -85,9 +95,6 @@ def profit_and_loss_report(request):
             'subtotal': subtotal,
         })
 
-    # ==========================
-    # BEBAN
-    # ==========================
     for account in expense_accounts:
         items = get_items(account)
 
@@ -114,14 +121,8 @@ def profit_and_loss_report(request):
             'subtotal': subtotal,
         })
 
-    # ==========================
-    # LABA BERSIH
-    # ==========================
     net_income = total_income - total_expense
 
-    # ==========================
-    # RENDER
-    # ==========================
     return render(request, 'ledger/profit_loss.html', {
         'mode': mode,
         'selected_period': selected_period,
@@ -132,4 +133,5 @@ def profit_and_loss_report(request):
         'total_income': total_income,
         'total_expense': total_expense,
         'net_income': net_income,
+        'current_entity': current_entity,
     })

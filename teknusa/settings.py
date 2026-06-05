@@ -50,6 +50,7 @@ INSTALLED_APPS = [
     'about',
     'services',
     'accounts',
+    'entity',
     'dashboard.apps.DashboardConfig',
 
     'leads',
@@ -107,6 +108,7 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 'blog.context_processors.seo_processor',
+                'entity.context_processors.active_entity',
             ]
         },
     }

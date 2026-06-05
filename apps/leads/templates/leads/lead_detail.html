@@ -209,6 +209,9 @@
     <div class="d-flex flex-wrap justify-content-between gap-3">
         <div>
             <span class="badge {% if lead.status == 'won' %}bg-success{% elif lead.status == 'lost' %}bg-danger{% else %}bg-primary{% endif %}">{{ lead.get_status_display }}</span>
+            {% if lead.entity %}
+                <span class="badge bg-info text-white ms-1">{{ lead.entity.name }}</span>
+            {% endif %}
             <h2 class="mt-3 mb-2">{{ lead.name }}</h2>
             <p class="text-muted mb-2">
                 {% if lead.company %}<i class="fas fa-building me-2"></i>{{ lead.company }}{% else %}<span class="text-muted">Perusahaan belum diisi</span>{% endif %}

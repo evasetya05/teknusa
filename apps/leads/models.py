@@ -32,7 +32,9 @@ class Lead(models.Model):
     ]
 
     name = models.CharField(max_length=200)
+    entity = models.ForeignKey('entity.Entity', on_delete=models.SET_NULL, blank=True, null=True, related_name='leads')
     email = models.EmailField(blank=True, null=True)
+
     phone = models.CharField(max_length=20, blank=True, null=True)
     company = models.CharField(max_length=200, blank=True, null=True)
     account_medsos = models.CharField(max_length=200, blank=True, null=True, verbose_name="Account Medsos")

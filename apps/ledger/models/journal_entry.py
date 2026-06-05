@@ -2,6 +2,7 @@ from django.db import models
 from ledger.models.account import Account
 
 class JournalEntry(models.Model):
+    entity = models.ForeignKey('entity.Entity', on_delete=models.CASCADE, blank=True, null=True, related_name='journal_entries')
     date = models.DateField()
     description = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
@@ -13,7 +14,7 @@ class JournalEntry(models.Model):
 
         # 💡 Hanya isi period jika belum diset
         if not self.period:
-            open_period = ClosingPeriod.get_open_period()
+            open_period = ClosingPeriod.get_open_period(entity=self.entity)
             self.period = open_period.period
 
         super().save(*args, **kwargs)

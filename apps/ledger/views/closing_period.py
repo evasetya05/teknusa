@@ -8,20 +8,42 @@ from ledger.models.closing_period import ClosingPeriod
 from ledger.models import JournalEntry, JournalItem, Account
 
 
+def _get_entity_from_session(request):
+    eid = request.session.get('current_entity_id')
+    if not eid or eid == 'all':
+        return None
+    try:
+        from entity.models import Entity
+        return Entity.objects.get(id=eid, is_active=True)
+    except Exception:
+        return None
+
+
 def closing_period_list(request):
-    periods = ClosingPeriod.objects.all().order_by('-period')
+    current_entity = _get_entity_from_session(request)
+
+    periods = ClosingPeriod.objects.all()
+    if current_entity:
+        periods = periods.filter(entity=current_entity)
+    periods = periods.order_by('-period')
 
     # 🔧 Jika belum ada data sama sekali, buat periode bulan sekarang
     if not periods.exists():
         current_period = timezone.now().strftime('%Y-%m')
-        ClosingPeriod.objects.create(period=current_period, is_closed=False)
+        ClosingPeriod.objects.create(period=current_period, is_closed=False, entity=current_entity)
         messages.info(request, f"Periode awal {current_period} dibuat otomatis.")
         return redirect('ledger:closing_period_list')
 
     # Pastikan minimal satu periode open
-    if not ClosingPeriod.objects.filter(is_closed=False).exists():
+    open_qs = ClosingPeriod.objects.filter(is_closed=False)
+    if current_entity:
+        open_qs = open_qs.filter(entity=current_entity)
+
+    if not open_qs.exists():
         current_period = timezone.now().strftime('%Y-%m')
-        period_obj, created = ClosingPeriod.objects.get_or_create(period=current_period)
+        period_obj, created = ClosingPeriod.objects.get_or_create(
+            period=current_period, entity=current_entity
+        )
         if created:
             messages.info(request, f"Periode {current_period} dibuat otomatis sebagai periode aktif.")
         else:
@@ -29,7 +51,10 @@ def closing_period_list(request):
             period_obj.save()
         return redirect('ledger:closing_period_list')
 
-    return render(request, 'ledger/closing_period_list.html', {'periods': periods})
+    return render(request, 'ledger/closing_period_list.html', {
+        'periods': periods,
+        'current_entity': current_entity,
+    })
 
 
 # ==========================================================
@@ -37,7 +62,9 @@ def closing_period_list(request):
 # ==========================================================
 def close_period(request, period):
     """Menutup periode dan otomatis membuka periode berikutnya."""
-    period_obj = ClosingPeriod.ensure_period_exists(period)
+    current_entity = _get_entity_from_session(request)
+
+    period_obj = ClosingPeriod.ensure_period_exists(period, entity=current_entity)
 
     if period_obj.is_closed:
         messages.warning(request, f"Periode {period} sudah tertutup.")
@@ -49,15 +76,11 @@ def close_period(request, period):
     period_obj.closed_by = request.user.username if request.user.is_authenticated else "system"
     period_obj.save()
 
-    # ==========================================================
-    # 🧾 PENYESUAIAN RETAINED EARNINGS (blok terpisah)
-    # ==========================================================
-    adjust_retained_earnings(request, period, request.user if request.user.is_authenticated else None)
+    # 🧾 PENYESUAIAN RETAINED EARNINGS
+    adjust_retained_earnings(request, period, current_entity,
+                             request.user if request.user.is_authenticated else None)
 
-
-    # ==========================================================
     # 🚪 Lanjut buka periode berikutnya
-    # ==========================================================
     try:
         current_date = datetime.strptime(period, "%Y-%m")
         next_month = (current_date + relativedelta(months=1)).strftime("%Y-%m")
@@ -65,7 +88,9 @@ def close_period(request, period):
         messages.error(request, "Format periode tidak valid. Gunakan YYYY-MM.")
         return redirect('ledger:closing_period_list')
 
-    next_period, created = ClosingPeriod.objects.get_or_create(period=next_month)
+    next_period, created = ClosingPeriod.objects.get_or_create(
+        period=next_month, entity=current_entity
+    )
     if created or next_period.is_closed:
         next_period.is_closed = False
         next_period.closed_at = None
@@ -81,23 +106,29 @@ def close_period(request, period):
 # ==========================================================
 # 📦 BLOK PENYESUAIAN RETAINED EARNINGS
 # ==========================================================
-from django.contrib import messages
-
-def adjust_retained_earnings(request, period, user=None):
+def adjust_retained_earnings(request, period, entity=None, user=None):
     """Hitung laba/rugi periode & sesuaikan akun retained earnings."""
     try:
-        income_accounts = Account.objects.filter(account_type="INCOME")
-        expense_accounts = Account.objects.filter(account_type="EXPENSES")
+        account_filter = {}
+        if entity:
+            account_filter['entity'] = entity
+
+        income_accounts = Account.objects.filter(account_type="INCOME", **account_filter)
+        expense_accounts = Account.objects.filter(account_type="EXPENSES", **account_filter)
+
+        je_filter = {'journal_entry__period': period}
+        if entity:
+            je_filter['journal_entry__entity'] = entity
 
         total_income = (
             JournalItem.objects.filter(
-                journal_entry__period=period, account__in=income_accounts
+                account__in=income_accounts, **je_filter
             ).aggregate(total=Sum('credit') - Sum('debit'))['total'] or 0
         )
 
         total_expense = (
             JournalItem.objects.filter(
-                journal_entry__period=period, account__in=expense_accounts
+                account__in=expense_accounts, **je_filter
             ).aggregate(total=Sum('debit') - Sum('credit'))['total'] or 0
         )
 
@@ -108,9 +139,9 @@ def adjust_retained_earnings(request, period, user=None):
             return
 
         retained_account = (
-            Account.objects.filter(account_name__icontains="Retained Earnings").first()
-            or Account.objects.filter(account_code="3999").first()
-            or Account.objects.filter(account_type="CAPITAL").first()
+            Account.objects.filter(account_name__icontains="Retained Earnings", **account_filter).first()
+            or Account.objects.filter(account_code="3999", **account_filter).first()
+            or Account.objects.filter(account_type="CAPITAL", **account_filter).first()
         )
 
         if not retained_account:
@@ -122,6 +153,7 @@ def adjust_retained_earnings(request, period, user=None):
             description=f"Automatic Retained Earnings Adjustment for {period}",
             period=period,
             is_posted=True,
+            entity=entity,
         )
 
         if net_profit > 0:
@@ -140,7 +172,6 @@ def adjust_retained_earnings(request, period, user=None):
             )
 
         messages.success(request, f"✅ Retained earnings disesuaikan otomatis untuk periode {period}.")
-        print(f"✅ Retained earnings adjusted: {net_profit}")
 
     except Exception as e:
         messages.error(request, f"Gagal menyesuaikan Retained Earnings: {e}")

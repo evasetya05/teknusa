@@ -12,7 +12,10 @@ def lead_list(request):
     lead_source_filter = request.GET.get('lead_source')
     
     # Base queryset
+    current_entity_id = request.session.get('current_entity_id')
     leads = Lead.objects.all().order_by('-created_at')
+    if current_entity_id and current_entity_id != 'all':
+        leads = leads.filter(entity_id=current_entity_id)
     
     # Apply filter if specified
     if lead_source_filter:
@@ -77,7 +80,11 @@ def lead_create(request):
         else:
             messages.error(request, 'Gagal menyimpan lead baru. Periksa kembali isian formulir.')
     else:
-        form = LeadForm()
+        current_entity_id = request.session.get('current_entity_id')
+        initial_data = {}
+        if current_entity_id and current_entity_id != 'all':
+            initial_data['entity'] = current_entity_id
+        form = LeadForm(initial=initial_data)
         formset = InteractionFormSet(instance=Lead())
 
     return render(request, 'leads/lead_form.html', {'form': form, 'formset': formset, 'lead': None})
@@ -106,24 +113,31 @@ def lead_edit(request, pk):
 
 
 def lead_analysis(request):
-    total_leads = Lead.objects.count()
-    active_leads = Lead.objects.exclude(status__in=['won', 'lost']).count()
-    won_leads = Lead.objects.filter(status='won').count()
+    current_entity_id = request.session.get('current_entity_id')
+    lead_qs = Lead.objects.all()
+    interaction_qs = Interaction.objects.select_related('lead')
+    if current_entity_id and current_entity_id != 'all':
+        lead_qs = lead_qs.filter(entity_id=current_entity_id)
+        interaction_qs = interaction_qs.filter(lead__entity_id=current_entity_id)
+
+    total_leads = lead_qs.count()
+    active_leads = lead_qs.exclude(status__in=['won', 'lost']).count()
+    won_leads = lead_qs.filter(status='won').count()
 
     conversion_rate = (won_leads / total_leads * 100) if total_leads else 0
 
     today = timezone.localdate()
-    pending_followups = Lead.objects.filter(
+    pending_followups = lead_qs.filter(
         next_follow_up__gte=today,
         status__in=['new', 'contacted', 'qualified', 'proposal_sent', 'negotiation']
     ).count()
-    overdue_followups = Lead.objects.filter(
+    overdue_followups = lead_qs.filter(
         next_follow_up__lt=today,
         status__in=['new', 'contacted', 'qualified', 'proposal_sent', 'negotiation']
     ).count()
 
     status_counts = (
-        Lead.objects.values('status')
+        lead_qs.values('status')
         .annotate(count=Count('id'))
         .order_by('-count')
     )
@@ -139,7 +153,7 @@ def lead_analysis(request):
     ]
 
     source_counts = (
-        Lead.objects.values('lead_source')
+        lead_qs.values('lead_source')
         .annotate(count=Count('id'))
         .order_by('-count')
     )
@@ -154,10 +168,9 @@ def lead_analysis(request):
         if item['lead_source'] or item['count']
     ]
 
-    recent_leads = Lead.objects.order_by('-created_at')[:8]
+    recent_leads = lead_qs.order_by('-created_at')[:8]
     recent_interactions = (
-        Interaction.objects.select_related('lead')
-        .order_by('-created_at')[:8]
+        interaction_qs.order_by('-created_at')[:8]
     )
 
     context = {
@@ -183,12 +196,19 @@ def lead_graphic(request):
     from datetime import timedelta
     from django.db.models.functions import TruncDate
     
-    total_leads = Lead.objects.count()
-    active_leads = Lead.objects.exclude(status__in=['won', 'lost']).count()
-    won_leads = Lead.objects.filter(status='won').count()
+    current_entity_id = request.session.get('current_entity_id')
+    lead_qs = Lead.objects.all()
+    interaction_qs = Interaction.objects.select_related('lead')
+    if current_entity_id and current_entity_id != 'all':
+        lead_qs = lead_qs.filter(entity_id=current_entity_id)
+        interaction_qs = interaction_qs.filter(lead__entity_id=current_entity_id)
+
+    total_leads = lead_qs.count()
+    active_leads = lead_qs.exclude(status__in=['won', 'lost']).count()
+    won_leads = lead_qs.filter(status='won').count()
     
-    status_counts = Lead.objects.values('status').annotate(count=Count('id')).order_by('-count')
-    source_counts = Lead.objects.values('lead_source').annotate(count=Count('id')).order_by('-count')
+    status_counts = lead_qs.values('status').annotate(count=Count('id')).order_by('-count')
+    source_counts = lead_qs.values('lead_source').annotate(count=Count('id')).order_by('-count')
     
     status_display = dict(Lead.STATUS_CHOICES)
     source_display = dict(Lead.LEAD_SOURCE_CHOICES)
@@ -197,8 +217,8 @@ def lead_graphic(request):
     breakdown_sources = [{'key': item['lead_source'] or '-', 'label': source_display.get(item['lead_source'], 'Tidak diketahui'), 'count': item['count']} for item in source_counts if item['lead_source'] or item['count']]
     
     start_date = timezone.localdate() - timedelta(days=13)
-    leads_by_day = Lead.objects.filter(created_at__date__gte=start_date).annotate(day=TruncDate('created_at')).values('day').annotate(count=Count('id'))
-    interactions_by_day = Interaction.objects.filter(created_at__date__gte=start_date).annotate(day=TruncDate('created_at')).values('day').annotate(count=Count('id'))
+    leads_by_day = lead_qs.filter(created_at__date__gte=start_date).annotate(day=TruncDate('created_at')).values('day').annotate(count=Count('id'))
+    interactions_by_day = interaction_qs.filter(created_at__date__gte=start_date).annotate(day=TruncDate('created_at')).values('day').annotate(count=Count('id'))
     
     leads_map = {item['day']: item['count'] for item in leads_by_day}
     interactions_map = {item['day']: item['count'] for item in interactions_by_day}

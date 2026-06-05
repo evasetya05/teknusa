@@ -8,7 +8,8 @@ class LeadForm(forms.ModelForm):
 
     class Meta:
         model = Lead
-        fields = ['name', 'email', 'phone', 'company', 'account_medsos', 'lead_source', 'assigned_to', 'priority', 'estimated_value', 'next_follow_up', 'status']
+        fields = ['name', 'entity', 'email', 'phone', 'company', 'account_medsos', 'lead_source', 'assigned_to', 'priority', 'estimated_value', 'next_follow_up', 'status']
+
         widgets = {
             'estimated_value': forms.NumberInput(attrs={'step': '0.01'}),
             'next_follow_up': forms.DateInput(attrs={'type': 'date'}),
