@@ -135,10 +135,9 @@ class Task(models.Model):
     @property
     def board(self):
         return self.column.board
-        
-      
-   
-   class TaskComment(models.Model):
+
+
+class TaskComment(models.Model):
     task = models.ForeignKey(
         Task,
         on_delete=models.CASCADE,
