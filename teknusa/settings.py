@@ -65,6 +65,7 @@ INSTALLED_APPS = [
     'ckeditor',
     'ckeditor_uploader',
     'crispy_forms',
+    'crispy_bootstrap4',
     'rest_framework',
     'django_summernote',
 
@@ -110,6 +111,7 @@ TEMPLATES = [
                 "django.contrib.messages.context_processors.messages",
                 'blog.context_processors.seo_processor',
                 'entity.context_processors.active_entity',
+                'core.context_processors.sidebar_menu',
             ]
         },
     }
