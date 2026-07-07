@@ -109,9 +109,36 @@
     }
 
     /* Responsive table */
+    @media (max-width: 992px) {
+        .btn-toolbar {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 0.75rem;
+        }
+
+        .btn-toolbar form {
+            width: 100%;
+        }
+
+        .btn-toolbar .form-select {
+            width: 100%;
+        }
+
+        .btn-toolbar .btn-group {
+            width: 100%;
+            flex-wrap: wrap;
+        }
+
+        .btn-toolbar .btn-group .btn {
+            flex: 1 1 auto;
+            min-width: 0;
+        }
+    }
+
     @media (max-width: 768px) {
         .table-container {
-            border-radius: 8px;
+            border-radius: 12px;
+            padding: 0;
         }
 
         .table thead {
@@ -124,43 +151,73 @@
         }
 
         .table tr {
-            margin-bottom: 1.25rem;
+            margin-bottom: 1rem;
             border: 1px solid #e5e7eb;
-            border-radius: 12px;
+            border-radius: 16px;
             overflow: hidden;
+            background: #fff;
         }
 
         .table td {
             text-align: left;
-            padding: 12px 16px 12px 120px;
+            padding: 14px 16px 14px 120px;
             position: relative;
             border-top: 1px solid #f3f4f6;
+            white-space: normal;
         }
 
         .table td::before {
             content: attr(data-label);
             position: absolute;
             left: 16px;
-            top: 50%;
-            transform: translateY(-50%);
-            font-weight: 600;
-            color: #6b7280;
-            font-size: 12px;
+            top: 14px;
+            font-weight: 700;
+            color: #374151;
+            font-size: 11px;
             text-transform: uppercase;
-            letter-spacing: 0.05em;
+            letter-spacing: 0.08em;
         }
 
         .table td:first-child {
             border-top: 0;
+            padding-top: 24px;
         }
 
         .table td:last-child {
             border-bottom: 0;
         }
+
+        .table td[data-label="Lead Source"],
+        .table td[data-label="Account Medsos"],
+        .table td[data-label="Dibuat"] {
+            padding-bottom: 18px;
+        }
+
+        .table td[data-label="Nama"] a {
+            display: inline-block;
+            color: #111827;
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+
+        .table td span.badge {
+            display: inline-flex;
+            margin-top: 6px;
+        }
+
+        .table td[data-label="Status"] {
+            padding-left: 16px;
+        }
+
+        .table td[data-label="Status"]::before {
+            top: 50%;
+            transform: translateY(-50%);
+        }
     }
     </style>
 
-    <div class="table-responsive">
+    <div class="table-container">
+        <div class="table-responsive">
         <table class="table table-hover">
             <thead>
                 <tr>
@@ -188,17 +245,15 @@
                         <span class="badge {% if lead.status == 'won' %}bg-success{% elif lead.status == 'lost' %}bg-danger{% else %}bg-primary{% endif %}">
                             {{ lead.get_status_display }}
                         </span>
-                   
+                    </td>
                     <td data-label="Perusahaan">{{ lead.company|default:"-" }}</td>
                     <td data-label="Account Medsos">{{ lead.account_medsos|default:"-" }}</td>
                     <td data-label="Lead Source">{{ lead.get_lead_source_display|default:"-" }}</td>
                     <td data-label="Next Follow-up">{% if lead.next_follow_up %}{{ lead.next_follow_up|date:"d/m/Y" }}{% else %}-{% endif %}</td>
-                    
-                    </td>
                     <td data-label="Dibuat">{{ lead.created_at|date:"d/m/Y" }}</td>
                 </tr>
                 {% empty %}
-                <tr><td colspan="9" class="text-center py-4 text-muted">Belum ada lead.</td></tr>
+                <tr><td colspan="7" class="text-center py-4 text-muted">Belum ada lead.</td></tr>
                 {% endfor %}
             </tbody>
         </table>

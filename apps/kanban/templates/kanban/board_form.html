@@ -21,9 +21,88 @@
     width: 20px;
     text-align: center;
 }
+    .sidebar-toggle {
+        display: none;
+    }
+
+    @media (max-width: 768px) {
+        .sidebar-toggle {
+            display: inline-flex !important;
+        }
+
+        .sidebar-overlay {
+            display: none;
+        }
+
+        .dashboard-sidebar {
+            display: none;
+            position: fixed;
+            top: 70px;
+            left: 0;
+            width: min(100%, 320px);
+            max-width: 320px;
+            height: calc(100vh - 70px);
+            z-index: 1055;
+            background: #fff;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
+            overflow-y: auto;
+            margin-bottom: 0;
+        }
+
+        body.sidebar-open .dashboard-sidebar {
+            display: block;
+        }
+
+        body.sidebar-open .sidebar-overlay {
+            display: block;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.45);
+            z-index: 1040;
+        }
+
+        .dashboard-sidebar .card,
+        .dashboard-sidebar .user-info-card {
+            border-radius: 0.75rem;
+        }
+
+        .dashboard-sidebar .px-2,
+        .dashboard-sidebar .card-body,
+        .dashboard-sidebar .card-header {
+            padding-left: 0.9rem !important;
+            padding-right: 0.9rem !important;
+        }
+
+        .dashboard-sidebar .nav-link {
+            padding: 0.85rem 0.9rem;
+            font-size: 0.95rem;
+        }
+
+        .dashboard-sidebar .nav-link i {
+            width: 18px;
+            margin-right: 0.8rem;
+        }
+
+        .dashboard-sidebar .nav-link.active,
+        .dashboard-sidebar .nav-link:hover {
+            border-radius: 0.5rem;
+        }
+
+        .dashboard-sidebar .nav-link[style] {
+            padding-left: 1rem !important;
+        }
+
+        .dashboard-sidebar .user-info-card .card-body {
+            padding: 1rem;
+        }
+    }
 </style>
 
 <div class="container-fluid mt-5">
+    <button class="btn btn-outline-secondary sidebar-toggle d-md-none mb-3" type="button" onclick="toggleSidebar()">
+        <i class="fas fa-bars me-1"></i>Menu
+    </button>
+    <div class="sidebar-overlay" onclick="toggleSidebar()"></div>
     <div class="row">
         <!-- Sidebar -->
         <div class="col-md-3 col-lg-2 dashboard-sidebar">
@@ -117,4 +196,15 @@
         </div>
     </div>
 </div>
+<script>
+function toggleSidebar() {
+    document.body.classList.toggle('sidebar-open');
+}
+function closeSidebarOnResize() {
+    if (window.innerWidth > 768) {
+        document.body.classList.remove('sidebar-open');
+    }
+}
+window.addEventListener('resize', closeSidebarOnResize);
+</script>
 {% endblock %}
