@@ -57,7 +57,6 @@ class Label(models.Model):
     def __str__(self):
         return self.name
 
-
 class Task(models.Model):
 
     PRIORITY_CHOICES = (
@@ -103,13 +102,9 @@ class Task(models.Model):
         blank=True
     )
 
-    position = models.PositiveIntegerField(
-        default=0
-    )
+    position = models.PositiveIntegerField(default=0)
 
-    completed = models.BooleanField(
-        default=False
-    )
+    completed = models.BooleanField(default=False)
 
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -118,16 +113,12 @@ class Task(models.Model):
         related_name='tasks_created'
     )
 
-    created_at = models.DateTimeField(
-        auto_now_add=True
-    )
+    created_at = models.DateTimeField(auto_now_add=True)
 
-    updated_at = models.DateTimeField(
-        auto_now=True
-    )
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        ordering = ['position']
+        ordering = ["position", "id"]
 
     def __str__(self):
         return self.title
@@ -136,6 +127,13 @@ class Task(models.Model):
     def board(self):
         return self.column.board
 
+    def get_absolute_url(self):
+        return reverse(
+            "kanban:board_detail",
+            kwargs={
+                "pk": self.column.board.pk
+            }
+        )
 
 class TaskComment(models.Model):
     task = models.ForeignKey(
@@ -156,7 +154,7 @@ class TaskComment(models.Model):
     )
 
     class Meta:
-        ordering = ['created_at']
+        ordering = ['-created_at']
 
     def __str__(self):
         return f"{self.author} - {self.task}"

@@ -9,6 +9,7 @@ from django.urls import reverse_lazy
 from django.http import JsonResponse
 from django.views import View
 from django.shortcuts import get_object_or_404
+from .forms import TaskForm
 
 from .models import (
     Board,
@@ -71,16 +72,7 @@ class BoardCreateView(CreateView):
 
 class TaskCreateView(CreateView):
     model = Task
-    fields = [
-        'column',
-        'title',
-        'description',
-        'priority',
-        'assignees',
-        'labels',
-        'start_date',
-        'due_date',
-    ]
+    form_class = TaskForm
     template_name = "kanban/task_form.html"
 
     def form_valid(self, form):
@@ -89,24 +81,16 @@ class TaskCreateView(CreateView):
 
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
-        board_id = self.request.GET.get('board')
+        board_id = self.request.GET.get("board")
         if board_id:
-            form.fields['column'].queryset = Column.objects.filter(board_id=board_id)
+            form.fields["column"].queryset = Column.objects.filter(
+                board_id=board_id
+            )
         return form
 
 class TaskUpdateView(UpdateView):
     model = Task
-    fields = [
-        'column',
-        'title',
-        'description',
-        'priority',
-        'assignees',
-        'labels',
-        'start_date',
-        'due_date',
-        'completed',
-    ]
+    form_class = TaskForm
     template_name = "kanban/task_form.html"
 
 class TaskDeleteView(DeleteView):
