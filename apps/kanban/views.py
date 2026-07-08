@@ -14,7 +14,9 @@ from .forms import TaskForm
 from .models import (
     Board,
     Column,
-    Task
+    Task,
+    TaskComment,
+    TaskAttachment,
 )
 from entity.models import Entity
 
@@ -105,3 +107,73 @@ class MoveTaskView(View):
         task.column_id = column_id
         task.save()
         return JsonResponse({"status": "success"})
+
+
+class TaskCommentCreateView(CreateView):
+    model = TaskComment
+    fields = ['comment']
+    template_name = "kanban/comment_form.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['task_id'] = self.kwargs.get('task_id')
+        return context
+
+    def form_valid(self, form):
+        form.instance.author = self.request.user
+        task_id = (
+            self.kwargs.get('task_id')
+            or self.request.POST.get('task')
+        )
+        if task_id:
+            try:
+                form.instance.task = Task.objects.get(pk=task_id)
+            except (Task.DoesNotExist, ValueError):
+                pass
+        return super().form_valid(form)
+
+    def get_success_url(self):
+        return self.object.task.get_absolute_url()
+
+
+class TaskCommentDeleteView(DeleteView):
+    model = TaskComment
+    template_name = "kanban/comment_confirm_delete.html"
+
+    def get_success_url(self):
+        return self.object.task.get_absolute_url()
+
+
+class TaskAttachmentCreateView(CreateView):
+    model = TaskAttachment
+    fields = ['file']
+    template_name = "kanban/attachment_form.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['task_id'] = self.kwargs.get('task_id')
+        return context
+
+    def form_valid(self, form):
+        form.instance.uploaded_by = self.request.user
+        task_id = (
+            self.kwargs.get('task_id')
+            or self.request.POST.get('task')
+        )
+        if task_id:
+            try:
+                form.instance.task = Task.objects.get(pk=task_id)
+            except (Task.DoesNotExist, ValueError):
+                pass
+        return super().form_valid(form)
+
+    def get_success_url(self):
+        return self.object.task.get_absolute_url()
+
+
+class TaskAttachmentDeleteView(DeleteView):
+    model = TaskAttachment
+    template_name = "kanban/attachment_confirm_delete.html"
+
+    def get_success_url(self):
+        return self.object.task.get_absolute_url()

@@ -18,7 +18,44 @@
         box-shadow: 0 4px 6px rgba(0,0,0,0.05);
     }
     #calendar {
-        max-height: 800px;
+        max-height: 1000px;
+    }
+
+    @media (max-width: 992px) {
+        .calendar-container {
+            padding: 16px;
+        }
+        .fc .fc-toolbar-chunk {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+        .fc .fc-toolbar-title {
+            width: 100%;
+            text-align: center;
+            font-size: 1rem;
+            margin-bottom: 0.75rem;
+        }
+        .fc-button {
+            padding: 0.45rem 0.8rem;
+            font-size: 0.82rem;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .calendar-container {
+            padding: 12px;
+        }
+
+        #calendar {
+            min-height: 500px;
+        }
+
+        .fc .fc-toolbar-chunk {
+            flex-direction: column;
+            align-items: stretch;
+        }
     }
 </style>
 {% endblock %}
@@ -45,12 +82,16 @@
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         var calendarEl = document.getElementById('calendar');
+        var isMobile = window.innerWidth < 768;
         var calendar = new FullCalendar.Calendar(calendarEl, {
-            initialView: 'dayGridMonth',
+            initialView: isMobile ? 'listWeek' : 'dayGridMonth',
             headerToolbar: {
                 left: 'prev,next today',
                 center: 'title',
-                right: 'dayGridMonth,timeGridWeek,timeGridDay'
+                right: isMobile ? 'listWeek' : 'dayGridMonth,timeGridWeek,timeGridDay'
+            },
+            views: {
+                listWeek: { buttonText: 'List' }
             },
             events: '{% url "leads:lead_calendar_events" %}',
             eventClick: function(info) {
@@ -60,9 +101,20 @@
                 }
             },
             height: 'auto',
-            themeSystem: 'bootstrap5'
+            contentHeight: 'auto',
+            themeSystem: 'bootstrap5',
+            dayMaxEvents: true,
+            navLinks: true,
+            eventDisplay: 'block'
         });
         calendar.render();
+
+        window.addEventListener('resize', function() {
+            var mobileView = window.innerWidth < 768 ? 'listWeek' : 'dayGridMonth';
+            if (calendar.view.type !== mobileView) {
+                calendar.changeView(mobileView);
+            }
+        });
     });
 </script>
 {% endblock %}
