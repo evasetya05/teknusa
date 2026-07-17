@@ -21,7 +21,7 @@ def get_sidebar_menu(request):
                     "title": "Dashboard",
                     "icon": "fas fa-tachometer-alt",
                     "url": reverse("dashboard"),
-                    "active": request.resolver_match.url_name == "dashboard",
+                    "active": getattr(request.resolver_match, "url_name", None) == "dashboard",
                 },
                 {
                     "title": "Leads",
