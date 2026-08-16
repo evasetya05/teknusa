@@ -24,9 +24,18 @@ class JournalEntry(models.Model):
 class JournalItem(models.Model):
     journal_entry = models.ForeignKey(JournalEntry, on_delete=models.CASCADE, related_name='items')
     account = models.ForeignKey(Account, on_delete=models.PROTECT)
+    cost_center = models.ForeignKey('ledger.CostCenter', on_delete=models.SET_NULL, null=True, blank=True, related_name='journal_items')
+    profit_center = models.ForeignKey('ledger.ProfitCenter', on_delete=models.SET_NULL, null=True, blank=True, related_name='journal_items')
+    project = models.ForeignKey('ledger.Project', on_delete=models.SET_NULL, null=True, blank=True, related_name='journal_items')
+    activity = models.ForeignKey('ledger.Activity', on_delete=models.SET_NULL, null=True, blank=True, related_name='journal_items')
+    location = models.ForeignKey('ledger.Location', on_delete=models.SET_NULL, null=True, blank=True, related_name='journal_items')
+    partner = models.ForeignKey('ledger.Partner', on_delete=models.SET_NULL, null=True, blank=True, related_name='journal_items')
+    product = models.ForeignKey('ledger.Product', on_delete=models.SET_NULL, null=True, blank=True, related_name='journal_items')
     debit = models.IntegerField(default=0)
     credit = models.IntegerField(default=0)
     note = models.CharField(max_length=255, blank=True, null=True)
 
     def __str__(self):
         return f"{self.journal_entry.date} - {self.account.account_name}"
+
+

@@ -2,6 +2,8 @@ from ledger.models import *
 from ledger.admin import *
 from .account import *
 from .ledger_report import *
+from .centers import *
+from .dimensions import *
 
 
 from django.contrib import admin

@@ -14,12 +14,13 @@
         }
 
         .container {
-            max-width: 900px;
+            max-width: 1400px;
             margin: 30px auto;
             background: #fff;
             padding: 25px;
             border-radius: 8px;
             box-shadow: 0 2px 8px rgba(0,0,0,.08);
+            overflow-x: auto;
         }
 
         h2 {
@@ -139,9 +140,16 @@
         <table>
             <thead>
                 <tr>
-                    <th style="width:25%">Akun</th>
-                    <th style="width:15%">Debit</th>
-                    <th style="width:15%">Kredit</th>
+                    <th>Akun</th>
+                    <th>Cost Center</th>
+                    <th>Profit Center</th>
+                    <th>Project</th>
+                    <th>Activity</th>
+                    <th>Location</th>
+                    <th>Partner</th>
+                    <th>Product</th>
+                    <th>Debit</th>
+                    <th>Kredit</th>
                     <th>Keterangan</th>
                 </tr>
             </thead>
@@ -154,6 +162,90 @@
                                 <option value="{{ acc.id }}"
                                     {% if acc.id == item.account.id %}selected{% endif %}>
                                     {{ acc }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </td>
+
+                    <td>
+                        <select name="cost_center_id[]">
+                            <option value="">-- Tanpa CC --</option>
+                            {% for cc in cost_centers %}
+                                <option value="{{ cc.id }}"
+                                    {% if item.cost_center_id == cc.id %}selected{% endif %}>
+                                    {{ cc.code }} - {{ cc.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </td>
+
+                    <td>
+                        <select name="profit_center_id[]">
+                            <option value="">-- Tanpa PC --</option>
+                            {% for pc in profit_centers %}
+                                <option value="{{ pc.id }}"
+                                    {% if item.profit_center_id == pc.id %}selected{% endif %}>
+                                    {{ pc.code }} - {{ pc.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </td>
+
+                    <td>
+                        <select name="project_id[]">
+                            <option value="">-- Tanpa Project --</option>
+                            {% for prj in projects %}
+                                <option value="{{ prj.id }}"
+                                    {% if item.project_id == prj.id %}selected{% endif %}>
+                                    {{ prj.code }} - {{ prj.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </td>
+
+                    <td>
+                        <select name="activity_id[]">
+                            <option value="">-- Tanpa Activity --</option>
+                            {% for act in activities %}
+                                <option value="{{ act.id }}"
+                                    {% if item.activity_id == act.id %}selected{% endif %}>
+                                    {{ act.code }} - {{ act.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </td>
+
+                    <td>
+                        <select name="location_id[]">
+                            <option value="">-- Tanpa Location --</option>
+                            {% for loc in locations %}
+                                <option value="{{ loc.id }}"
+                                    {% if item.location_id == loc.id %}selected{% endif %}>
+                                    {{ loc.code }} - {{ loc.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </td>
+
+                    <td>
+                        <select name="partner_id[]">
+                            <option value="">-- Tanpa Partner --</option>
+                            {% for prt in partners %}
+                                <option value="{{ prt.id }}"
+                                    {% if item.partner_id == prt.id %}selected{% endif %}>
+                                    {{ prt.name }} ({{ prt.get_partner_type_display }})
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </td>
+
+                    <td>
+                        <select name="product_id[]">
+                            <option value="">-- Tanpa Product --</option>
+                            {% for prd in products %}
+                                <option value="{{ prd.id }}"
+                                    {% if item.product_id == prd.id %}selected{% endif %}>
+                                    {{ prd.code }} - {{ prd.name }}
                                 </option>
                             {% endfor %}
                         </select>

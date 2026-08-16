@@ -33,6 +33,13 @@
         <thead>
             <tr>
                 <th>Akun</th>
+                <th>Cost Center</th>
+                <th>Profit Center</th>
+                <th>Project</th>
+                <th>Activity</th>
+                <th>Location</th>
+                <th>Partner</th>
+                <th>Product</th>
                 <th>Debit</th>
                 <th>Kredit</th>
                 <th>Keterangan</th>
@@ -45,6 +52,62 @@
                     <select name="account_id[]">
                         {% for account in accounts %}
                             <option value="{{ account.id }}">{{ account.account_name }}</option>
+                        {% endfor %}
+                    </select>
+                </td>
+                <td>
+                    <select name="cost_center_id[]">
+                        <option value="">-- Tanpa CC --</option>
+                        {% for cc in cost_centers %}
+                            <option value="{{ cc.id }}">{{ cc.code }} - {{ cc.name }}</option>
+                        {% endfor %}
+                    </select>
+                </td>
+                <td>
+                    <select name="profit_center_id[]">
+                        <option value="">-- Tanpa PC --</option>
+                        {% for pc in profit_centers %}
+                            <option value="{{ pc.id }}">{{ pc.code }} - {{ pc.name }}</option>
+                        {% endfor %}
+                    </select>
+                </td>
+                <td>
+                    <select name="project_id[]">
+                        <option value="">-- Tanpa Project --</option>
+                        {% for prj in projects %}
+                            <option value="{{ prj.id }}">{{ prj.code }} - {{ prj.name }}</option>
+                        {% endfor %}
+                    </select>
+                </td>
+                <td>
+                    <select name="activity_id[]">
+                        <option value="">-- Tanpa Activity --</option>
+                        {% for act in activities %}
+                            <option value="{{ act.id }}">{{ act.code }} - {{ act.name }}</option>
+                        {% endfor %}
+                    </select>
+                </td>
+                <td>
+                    <select name="location_id[]">
+                        <option value="">-- Tanpa Location --</option>
+                        {% for loc in locations %}
+                            <option value="{{ loc.id }}">{{ loc.code }} - {{ loc.name }}</option>
+                        {% endfor %}
+                    </select>
+                </td>
+                <td>
+                    <select name="partner_id[]">
+                        <option value="">-- Tanpa Partner --</option>
+                        {% for prt in partners %}
+                            <option value="{{ prt.id }}">{{ prt.name }} ({{ prt.get_partner_type_display }})</option>
+                        {% endfor %}
+                    </select>
+                </td>
+                <td>
+                    <select name="product_id[]">
+                        <option value="">-- Tanpa Product --</option>
+                        {% for prd in products %}
+                            <option value="{{ prd.id }}">{{ prd.code }} - {{ prd.name }}</option>
                         {% endfor %}
                     </select>
                 </td>

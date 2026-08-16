@@ -33,11 +33,12 @@ function addEntry() {
 
     // Reset semua input
     row.querySelectorAll('input').forEach(input => {
-        if (input.name.includes('debit') || input.name.includes('credit')) {
-            input.value = '';
-        } else {
-            input.value = '';
-        }
+        input.value = '';
+    });
+
+    // Reset select untuk semua dimensi & akun
+    row.querySelectorAll('select').forEach(select => {
+        select.selectedIndex = 0;
     });
 
     // Tambahkan event listener
