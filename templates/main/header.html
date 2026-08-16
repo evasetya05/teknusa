@@ -21,25 +21,12 @@
                                     {% get_meanList as means %}
                                     <li class="current-item"><a href="{% url 'home:home' %}">Home</a></li>
 
-                                    {% comment %} Safe URLs: only include if apps exist in urls.py {% endcomment %}
-                                    {% if 'about' in request.resolver_match.namespace %}
-                                        <li><a href="{% url 'about:about' %}">About</a></li>
-                                    {% endif %}
-                                    {% if 'blog' in request.resolver_match.namespace %}
-                                        <li><a href="{% url 'blog:index' %}">Blogs</a></li>
-                                    {% endif %}
-                                    {% if 'services' in request.resolver_match.namespace %}
-                                        <li><a href="{% url 'services:services' %}">Services</a></li>
-                                    {% endif %}
-                                    {% if 'portfolio' in request.resolver_match.namespace %}
-                                        <li><a href="{% url 'portfolio:portfolio' %}">Portfolio</a></li>
-                                    {% endif %}
-                                    {% if 'contactus' in request.resolver_match.namespace %}
-                                        <li><a href="{% url 'contactus:contact' %}">Contact</a></li>
-                                    {% endif %}
-                                    {% if 'careers' in request.resolver_match.namespace %}
-                                        <li><a href="{% url 'careers:careers' %}">Careers</a></li>
-                                    {% endif %}
+                                    <li><a href="{% url 'about:about' %}">About</a></li>
+                                    <li><a href="{% url 'blog:index' %}">Blogs</a></li>
+                                    <li><a href="{% url 'services:services' %}">Services</a></li>
+                                    <li><a href="{% url 'portfolio:portfolio' %}">Portfolio</a></li>
+                                    <li><a href="{% url 'contactus:contact' %}">Contact</a></li>
+                                    {# <li><a href="{% url 'careers:careers' %}">Careers</a></li> #}
 
                                     {% for mean in means %}
                                         {% if mean.status == 'y' %}

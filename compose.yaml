@@ -63,6 +63,7 @@ services:
     ports:
       - "8002:8000"
     volumes:
+      - .:/app
       - ./media:/app/media
       - ./staticfiles:/app/staticfiles
       - ./whoosh_index:/app/whoosh_index
@@ -94,6 +95,7 @@ services:
       - DB_PASSWORD=${MYSQL_PASSWORD:-@Pontianak123}
       - REDIS_URL=redis://redis:6379/0
     volumes:
+      - .:/app
       - ./media:/app/media
       - ./whoosh_index:/app/whoosh_index
     depends_on:
@@ -118,6 +120,7 @@ services:
       - DB_PASSWORD=${MYSQL_PASSWORD:-@Pontianak123}
       - REDIS_URL=redis://redis:6379/0
     volumes:
+      - .:/app
       - ./media:/app/media
       - ./celerybeat-schedule:/app/celerybeat-schedule
     depends_on:
