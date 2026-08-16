@@ -265,20 +265,30 @@
                             <div class="d-flex justify-content-between align-items-start">
                                 <div>
                                     <div class="kanban-task-title">{{ task.title }}</div>
-                                    <div class="kanban-task-meta">
+                                    <div class="kanban-task-meta d-flex flex-wrap gap-2 mt-1 align-items-center">
                                         {% if task.due_date %}
-                                        <span class="me-2"><i class="far fa-calendar-alt"></i> {{ task.due_date|date:"M d" }}</span>
+                                        <span><i class="far fa-calendar-alt me-1"></i>{{ task.due_date|date:"M d" }}</span>
                                         {% endif %}
                                         {% if task.assignees.exists %}
-                                        <span><i class="far fa-user"></i> {{ task.assignees.count }}</span>
+                                        <span><i class="far fa-user me-1"></i>{{ task.assignees.count }}</span>
+                                        {% endif %}
+                                        {% if task.attachments.count > 0 %}
+                                        <span class="badge bg-success bg-opacity-10 text-success border" title="{{ task.attachments.count }} File Lampiran">
+                                            <i class="fas fa-paperclip me-1"></i>{{ task.attachments.count }}
+                                        </span>
+                                        {% endif %}
+                                        {% if task.comments.count > 0 %}
+                                        <span class="badge bg-primary bg-opacity-10 text-primary border" title="{{ task.comments.count }} Komentar">
+                                            <i class="far fa-comment-dots me-1"></i>{{ task.comments.count }}
+                                        </span>
                                         {% endif %}
                                     </div>
                                 </div>
-                                <div class="btn-group btn-group-sm" role="group" aria-label="task actions">
-                                    <a href="{% url 'kanban:task_comment_add' task_id=task.pk %}" class="btn btn-outline-secondary" title="Add comment" onclick="event.stopPropagation();">
+                                <div class="btn-group btn-group-sm flex-shrink-0 ms-2" role="group" aria-label="task actions">
+                                    <a href="{% url 'kanban:task_comment_add' task_id=task.pk %}" class="btn btn-light btn-sm text-secondary border" title="Tambah / Lihat Komentar" onclick="event.stopPropagation();">
                                         <i class="far fa-comment"></i>
                                     </a>
-                                    <a href="{% url 'kanban:task_attachment_add' task_id=task.pk %}" class="btn btn-outline-secondary" title="Add attachment" onclick="event.stopPropagation();">
+                                    <a href="{% url 'kanban:task_attachment_add' task_id=task.pk %}" class="btn btn-light btn-sm text-secondary border" title="Tambah / Lihat Lampiran" onclick="event.stopPropagation();">
                                         <i class="far fa-paperclip"></i>
                                     </a>
                                 </div>

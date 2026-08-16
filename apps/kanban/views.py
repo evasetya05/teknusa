@@ -5,10 +5,12 @@ from django.views.generic import (
     UpdateView,
     DeleteView,
 )
-from django.urls import reverse_lazy
+from django.urls import reverse, reverse_lazy
 from django.http import JsonResponse
 from django.views import View
-from django.shortcuts import get_object_or_404
+from django.shortcuts import get_object_or_404, redirect
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth import get_user_model
 from .forms import TaskForm
 
 from .models import (
@@ -20,7 +22,8 @@ from .models import (
 )
 from entity.models import Entity
 
-class BoardListView(ListView):
+
+class BoardListView(LoginRequiredMixin, ListView):
     model = Board
     template_name = "kanban/board_list.html"
     context_object_name = "boards"
@@ -32,7 +35,8 @@ class BoardListView(ListView):
             qs = qs.filter(entity_id=current_entity_id)
         return qs
 
-class BoardDetailView(DetailView):
+
+class BoardDetailView(LoginRequiredMixin, DetailView):
     model = Board
     template_name = "kanban/board_detail.html"
     context_object_name = "board"
@@ -41,12 +45,19 @@ class BoardDetailView(DetailView):
         context = super().get_context_data(**kwargs)
         context['columns'] = (
             self.object.columns
-            .prefetch_related('tasks')
+            .prefetch_related(
+                'tasks',
+                'tasks__comments',
+                'tasks__attachments',
+                'tasks__assignees',
+                'tasks__labels'
+            )
             .all()
         )
         return context
 
-class BoardCreateView(CreateView):
+
+class BoardCreateView(LoginRequiredMixin, CreateView):
     model = Board
     fields = [
         'name',
@@ -72,7 +83,8 @@ class BoardCreateView(CreateView):
         
         return response
 
-class TaskCreateView(CreateView):
+
+class TaskCreateView(LoginRequiredMixin, CreateView):
     model = Task
     form_class = TaskForm
     template_name = "kanban/task_form.html"
@@ -90,16 +102,29 @@ class TaskCreateView(CreateView):
             )
         return form
 
-class TaskUpdateView(UpdateView):
+
+class TaskUpdateView(LoginRequiredMixin, UpdateView):
     model = Task
     form_class = TaskForm
     template_name = "kanban/task_form.html"
 
-class TaskDeleteView(DeleteView):
-    model = Task
-    success_url = reverse_lazy('kanban:board_list')
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['comments'] = self.object.comments.select_related('author').all()
+        context['attachments'] = self.object.attachments.select_related('uploaded_by').all()
+        return context
 
-class MoveTaskView(View):
+
+class TaskDeleteView(LoginRequiredMixin, DeleteView):
+    model = Task
+    
+    def get_success_url(self):
+        if self.object and self.object.column:
+            return self.object.column.board.get_absolute_url()
+        return reverse_lazy('kanban:board_list')
+
+
+class MoveTaskView(LoginRequiredMixin, View):
     def post(self, request, *args, **kwargs):
         task_id = request.POST.get("task_id")
         column_id = request.POST.get("column_id")
@@ -109,71 +134,84 @@ class MoveTaskView(View):
         return JsonResponse({"status": "success"})
 
 
-class TaskCommentCreateView(CreateView):
+class TaskCommentCreateView(LoginRequiredMixin, CreateView):
     model = TaskComment
     fields = ['comment']
     template_name = "kanban/comment_form.html"
 
+    def get_task(self):
+        task_id = self.kwargs.get('task_id') or self.request.POST.get('task')
+        return get_object_or_404(Task, pk=task_id)
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['task_id'] = self.kwargs.get('task_id')
+        task = self.get_task()
+        context['task'] = task
+        context['task_id'] = task.pk
+        context['comments'] = task.comments.select_related('author').all()
         return context
 
     def form_valid(self, form):
-        form.instance.author = self.request.user
-        task_id = (
-            self.kwargs.get('task_id')
-            or self.request.POST.get('task')
-        )
-        if task_id:
-            try:
-                form.instance.task = Task.objects.get(pk=task_id)
-            except (Task.DoesNotExist, ValueError):
-                pass
+        task = self.get_task()
+        form.instance.task = task
+        if self.request.user.is_authenticated:
+            form.instance.author = self.request.user
+        else:
+            User = get_user_model()
+            form.instance.author = User.objects.filter(is_superuser=True).first() or User.objects.first()
         return super().form_valid(form)
 
     def get_success_url(self):
-        return self.object.task.get_absolute_url()
+        next_url = self.request.POST.get('next')
+        if next_url:
+            return next_url
+        return reverse('kanban:task_edit', kwargs={'pk': self.object.task.pk})
 
 
-class TaskCommentDeleteView(DeleteView):
+class TaskCommentDeleteView(LoginRequiredMixin, DeleteView):
     model = TaskComment
     template_name = "kanban/comment_confirm_delete.html"
 
     def get_success_url(self):
-        return self.object.task.get_absolute_url()
+        return reverse('kanban:task_edit', kwargs={'pk': self.object.task.pk})
 
 
-class TaskAttachmentCreateView(CreateView):
+class TaskAttachmentCreateView(LoginRequiredMixin, CreateView):
     model = TaskAttachment
     fields = ['file']
     template_name = "kanban/attachment_form.html"
 
+    def get_task(self):
+        task_id = self.kwargs.get('task_id') or self.request.POST.get('task')
+        return get_object_or_404(Task, pk=task_id)
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['task_id'] = self.kwargs.get('task_id')
+        task = self.get_task()
+        context['task'] = task
+        context['task_id'] = task.pk
+        context['attachments'] = task.attachments.select_related('uploaded_by').all()
         return context
 
     def form_valid(self, form):
-        form.instance.uploaded_by = self.request.user
-        task_id = (
-            self.kwargs.get('task_id')
-            or self.request.POST.get('task')
-        )
-        if task_id:
-            try:
-                form.instance.task = Task.objects.get(pk=task_id)
-            except (Task.DoesNotExist, ValueError):
-                pass
+        task = self.get_task()
+        form.instance.task = task
+        if self.request.user.is_authenticated:
+            form.instance.uploaded_by = self.request.user
+        else:
+            form.instance.uploaded_by = None
         return super().form_valid(form)
 
     def get_success_url(self):
-        return self.object.task.get_absolute_url()
+        next_url = self.request.POST.get('next')
+        if next_url:
+            return next_url
+        return reverse('kanban:task_edit', kwargs={'pk': self.object.task.pk})
 
 
-class TaskAttachmentDeleteView(DeleteView):
+class TaskAttachmentDeleteView(LoginRequiredMixin, DeleteView):
     model = TaskAttachment
     template_name = "kanban/attachment_confirm_delete.html"
 
     def get_success_url(self):
-        return self.object.task.get_absolute_url()
+        return reverse('kanban:task_edit', kwargs={'pk': self.object.task.pk})

@@ -1,12 +1,100 @@
 {% extends "main/layout.html" %}
+{% load static %}
 
 {% block content %}
-<h2>Upload Attachment</h2>
-<form method="post" enctype="multipart/form-data">
-    {% csrf_token %}
-    <input type="hidden" name="task" value="{{ task_id }}">
-    {{ form.as_p }}
-    <button type="submit" class="btn btn-primary">Upload</button>
-    <a href="{{ request.META.HTTP_REFERER|default:'/' }}" class="btn btn-secondary">Cancel</a>
-</form>
+<div class="container py-4">
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'kanban:board_list' %}">Boards</a></li>
+            {% if task %}
+            <li class="breadcrumb-item"><a href="{{ task.board.get_absolute_url }}">{{ task.board.name }}</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'kanban:task_edit' task.pk %}">{{ task.title }}</a></li>
+            {% endif %}
+            <li class="breadcrumb-item active" aria-current="page">Lampiran File</li>
+        </ol>
+    </nav>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <!-- Header Task Info -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="badge bg-success bg-opacity-10 text-success fw-semibold">Task #{{ task.pk }}</span>
+                        <span class="badge bg-secondary">{{ task.column.name }}</span>
+                    </div>
+                    <h4 class="fw-bold mb-1">{{ task.title }}</h4>
+                    {% if task.description %}
+                    <p class="text-muted small mb-0">{{ task.description|truncatewords:30 }}</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Form Upload File Attachment -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white py-3">
+                    <h5 class="mb-0 fw-bold"><i class="fas fa-upload text-success me-2"></i>Upload File Lampiran</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        <input type="hidden" name="task" value="{{ task_id }}">
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Pilih File</label>
+                            <input type="file" name="file" class="form-control" required>
+                            <div class="form-text">Mendukung file dokumen, gambar, zip, pdf, dan lainnya.</div>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-success">
+                                <i class="fas fa-upload me-1"></i> Upload File
+                            </button>
+                            {% if task %}
+                            <a href="{% url 'kanban:task_edit' task.pk %}" class="btn btn-outline-secondary">Kembali ke Task</a>
+                            {% else %}
+                            <a href="{% url 'kanban:board_list' %}" class="btn btn-outline-secondary">Kembali</a>
+                            {% endif %}
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Daftar File yang Sudah Terlampir -->
+            {% if attachments %}
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0 fw-bold"><i class="fas fa-paperclip text-success me-2"></i>File Terlampir ({{ attachments|length }})</h6>
+                </div>
+                <div class="card-body">
+                    {% for att in attachments %}
+                    <div class="d-flex align-items-center justify-content-between p-3 mb-2 bg-light rounded border">
+                        <div class="d-flex align-items-center overflow-hidden me-3">
+                            <i class="far fa-file-alt fa-2x text-primary me-3 flex-shrink-0"></i>
+                            <div class="text-truncate">
+                                <a href="{{ att.file.url }}" target="_blank" class="fw-bold text-dark text-decoration-none text-truncate d-block" title="{{ att.file.name }}">
+                                    {{ att.file.name|slice:"13:"|default:att.file.name }}
+                                </a>
+                                <small class="text-muted">
+                                    Diunggah oleh {{ att.uploaded_by.username|default:"User" }} • {{ att.uploaded_at|date:"d M Y H:i" }}
+                                </small>
+                            </div>
+                        </div>
+                        <div class="d-flex align-items-center gap-2 flex-shrink-0">
+                            <a href="{{ att.file.url }}" target="_blank" class="btn btn-sm btn-outline-primary" title="Download / Buka File">
+                                <i class="fas fa-download me-1"></i> Buka
+                            </a>
+                            <form action="{% url 'kanban:task_attachment_delete' att.pk %}" method="post" class="d-inline" onsubmit="return confirm('Hapus file lampiran ini?')">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Hapus File">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
 {% endblock %}
