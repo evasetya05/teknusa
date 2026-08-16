@@ -4,4 +4,5 @@ from ledger.views.ledger_report import ledger_report
 
 urlpatterns = [
     path('', index, name='ledger_index'),  # / --> halaman utama
+    path('', index, name='index'),         # alias index
 ]
