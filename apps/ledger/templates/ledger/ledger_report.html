@@ -61,10 +61,9 @@
         </div>
         <div class="col-auto filter-period">
             <select name="period" id="period" class="form-select">
-                <option value="">-- Periode Open (Berjalan) --</option>
-                {% for p in closed_periods %}
+                {% for p in periods %}
                     <option value="{{ p.period }}" {% if selected_period == p.period %}selected{% endif %}>
-                        {{ p.period }} {% if p.is_closed %}(Closed){% endif %}
+                        {{ p.period }} {% if p.is_closed %}(Closed){% else %}(Open - Berjalan){% endif %}
                     </option>
                 {% endfor %}
             </select>
@@ -87,10 +86,11 @@
     {% elif selected_period %}
         <div class="alert alert-info border-start border-4 border-info shadow-sm">
             <strong>Menampilkan transaksi untuk periode: {{ selected_period }}</strong>
-        </div>
-    {% else %}
-        <div class="alert alert-warning border-start border-4 border-warning shadow-sm">
-            Menampilkan transaksi untuk periode <strong>yang masih open (berjalan)</strong>.
+            {% if is_period_closed %}
+                <span class="badge bg-secondary ms-2">Closed</span>
+            {% else %}
+                <span class="badge bg-success ms-2">Open - Periode Berjalan</span>
+            {% endif %}
         </div>
     {% endif %}
 
@@ -102,11 +102,11 @@
                 <h5 class="mb-0 fw-semibold text-dark">
                     {{ data.account.account_code }} — {{ data.account.account_name }}
                 </h5>
-                <span class="badge bg-secondary">
+                <span class="badge {% if is_period_closed %}bg-secondary{% else %}bg-success{% endif %}">
                     {% if mode == 'year' %}
                         Tahun {{ selected_year }}
                     {% else %}
-                        {{ selected_period|default:"Open Period" }}
+                        Periode {{ selected_period }} {% if not is_period_closed %}(Open){% endif %}
                     {% endif %}
                 </span>
             </div>
