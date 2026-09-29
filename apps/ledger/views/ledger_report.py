@@ -35,19 +35,21 @@ def ledger_report(request):
 
     ledger_data = []
 
-    # ===============================
+# ===============================
     # DATA PERIODE
     # ===============================
     # Pastikan minimal ada periode berjalan aktif (open)
     ClosingPeriod.get_open_period(entity=current_entity)
 
-    periods_qs = ClosingPeriod.objects.all()
     if current_entity:
-        periods_qs = periods_qs.filter(entity=current_entity)
-    periods = periods_qs.order_by('-period')
+        periods = ClosingPeriod.objects.filter(entity=current_entity).order_by('-period')
+    else:
+        # Hanya ambil record global, jangan campur data entitas lain
+        periods = ClosingPeriod.objects.filter(entity__isnull=True).order_by('-period')
 
     # Default periode jika tidak dipilih atau kosong
     if mode == 'period' and not selected_period:
+        # Prioritaskan periode terbaru, bukan sembarang open period
         open_period_obj = periods.filter(is_closed=False).first()
         if open_period_obj:
             selected_period = open_period_obj.period
