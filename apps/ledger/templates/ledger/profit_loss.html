@@ -1,13 +1,19 @@
+{% extends 'dashboard/base.html' %}
 {% load static %}
 {% load humanize %}
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <title>Laporan Laba Rugi</title>
-    <link rel="stylesheet" href="{% static 'ledger/css/profit_loss.css' %}">
-</head>
-<body>
+
+{% block title %}Laporan Laba Rugi - Modul Ledger{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'ledger/css/profit_loss.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <a href="{% url 'ledger:ledger_index' %}" class="btn btn-outline-secondary btn-sm">
+        <i class="fas fa-arrow-left me-1"></i> Dashboard Ledger
+    </a>
+</div>
 
 <h2>Laporan Laba Rugi</h2>
 
@@ -168,6 +174,4 @@
     Laba / Rugi Bersih:
     <strong>{{ net_income|floatformat:0|intcomma }}</strong>
 </div>
-
-</body>
-</html>
+{% endblock %}

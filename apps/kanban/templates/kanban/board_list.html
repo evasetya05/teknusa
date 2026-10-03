@@ -1,244 +1,63 @@
-{% extends "main/layout.html" %}
+{% extends "dashboard/base.html" %}
 {% load static %}
 
+{% block title %}Kanban Boards - Teknusa ERP{% endblock %}
+
 {% block content %}
-<style>
-.dashboard-sidebar .nav-link {
-    color: #495057;
-    padding: 0.75rem 1rem;
-    border-radius: 0;
-    transition: all 0.2s ease;
-}
-.dashboard-sidebar .nav-link:hover {
-    background-color: #f8f9fa;
-    color: #007bff;
-}
-.dashboard-sidebar .nav-link.active {
-    background-color: #007bff;
-    color: white;
-}
-.dashboard-sidebar .nav-link i {
-    width: 20px;
-    text-align: center;
-}
-.user-info-card {
-    border: none;
-    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
-}
-    .sidebar-toggle {
-        display: none;
-    }
+<div class="d-flex justify-content-between align-items-center mb-4 pt-2">
+    <div>
+        <h1 class="h3 fw-bold text-dark mb-1">
+            <i class="fas fa-columns text-primary me-2"></i>Kanban Boards
+        </h1>
+        <p class="text-muted mb-0 small">Kelola alur kerja dan kartu tugas secara visual.</p>
+    </div>
+    <div>
+        <a href="{% url 'kanban:board_add' %}" class="btn btn-primary">
+            <i class="fas fa-plus me-1"></i> New Board
+        </a>
+    </div>
+</div>
 
-    @media (max-width: 768px) {
-        .sidebar-toggle {
-            display: inline-flex !important;
-        }
-
-        .sidebar-overlay {
-            display: none;
-        }
-
-        .dashboard-sidebar {
-            display: none;
-            position: fixed;
-            top: 70px;
-            left: 0;
-            width: min(100%, 320px);
-            max-width: 320px;
-            height: calc(100vh - 70px);
-            z-index: 1055;
-            background: #fff;
-            box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
-            overflow-y: auto;
-            margin-bottom: 0;
-        }
-
-        body.sidebar-open .dashboard-sidebar {
-            display: block;
-        }
-
-        body.sidebar-open .sidebar-overlay {
-            display: block;
-            position: fixed;
-            inset: 0;
-            background: rgba(0, 0, 0, 0.45);
-            z-index: 1040;
-        }
-
-        .dashboard-sidebar .card,
-        .dashboard-sidebar .user-info-card {
-            border-radius: 0.75rem;
-        }
-
-        .dashboard-sidebar .px-2,
-        .dashboard-sidebar .card-body,
-        .dashboard-sidebar .card-header {
-            padding-left: 0.9rem !important;
-            padding-right: 0.9rem !important;
-        }
-
-        .dashboard-sidebar .nav-link {
-            padding: 0.85rem 0.9rem;
-            font-size: 0.95rem;
-        }
-
-        .dashboard-sidebar .nav-link i {
-            width: 18px;
-            margin-right: 0.8rem;
-        }
-
-        .dashboard-sidebar .nav-link.active,
-        .dashboard-sidebar .nav-link:hover {
-            border-radius: 0.5rem;
-        }
-
-        .dashboard-sidebar .nav-link[style] {
-            padding-left: 1rem !important;
-        }
-
-        .dashboard-sidebar .user-info-card .card-body {
-            padding: 1rem;
-        }
-    }
-</style>
-
-<div class="container-fluid mt-5">
-    <button class="btn btn-outline-secondary sidebar-toggle d-md-none mb-3" type="button" onclick="toggleSidebar()">
-        <i class="fas fa-bars me-1"></i>Menu
-    </button>
-    <div class="sidebar-overlay" onclick="toggleSidebar()"></div>
-    <div class="row">
-    <div class="row">
-        <!-- Sidebar -->
-        <div class="col-md-3 col-lg-2 dashboard-sidebar">
-            <div class="card">
-                <div class="px-2 pt-2 pb-1">
-                    <small class="text-muted text-uppercase fw-bold px-2" style="font-size:0.68rem; letter-spacing:0.08em;">Perusahaan Aktif</small>
-                    <div class="px-2 py-2 mb-1 rounded-2" style="background: linear-gradient(135deg,#eff6ff,#f0f9ff); border: 1px solid #bfdbfe;">
-                        <div class="d-flex align-items-center gap-2">
-                            <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
-                                 style="width:30px;height:30px;background:#2563eb;color:white;font-size:12px;font-weight:700;">
-                                {% if current_entity %}{{ current_entity.name|slice:":2"|upper }}{% else %}🌐{% endif %}
-                            </div>
-                            <div class="flex-grow-1 overflow-hidden">
-                                <div class="fw-bold text-dark" style="font-size:0.82rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-                                    {% if current_entity %}{{ current_entity.name }}{% else %}Semua Perusahaan{% endif %}
-                                </div>
-                                {% if current_entity and current_entity.code %}
-                                <small class="text-muted" style="font-size:0.7rem;">{{ current_entity.code }}</small>
-                                {% endif %}
-                            </div>
-                        </div>
-                    </div>
-                    <a class="nav-link py-1" href="{% url 'entity:entity_list' %}" style="font-size:0.82rem;">
-                        <i class="fas fa-building me-2 text-primary"></i><strong>Kelola Perusahaan</strong>
-                    </a>
+<div class="row g-4">
+    {% for board in boards %}
+    <div class="col-md-6 col-lg-4">
+        <div class="card h-100 shadow-sm border-0" style="border-radius: 12px; transition: transform 0.2s ease, box-shadow 0.2s ease;">
+            <div class="card-body p-4">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <span class="badge bg-primary bg-opacity-10 text-primary px-3 py-2 rounded-pill fw-semibold">
+                        <i class="fas fa-columns me-1"></i> {{ board.columns.count }} Kolom
+                    </span>
+                    <small class="text-muted">
+                        <i class="far fa-calendar-alt me-1"></i>{{ board.created_at|date:"d M Y"|default:"" }}
+                    </small>
                 </div>
+                <h5 class="card-title fw-bold text-dark mb-2">{{ board.name }}</h5>
+                <p class="card-text text-muted small mb-0">{{ board.description|default:"Tidak ada deskripsi board."|truncatewords:25 }}</p>
             </div>
-
-            <div class="card mt-3">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">Menu</h5>
-                </div>
-                <div class="card-body p-0">
-                    <nav class="nav flex-column">
-
-                        {% for group in sidebar_menu %}
-
-                            {% if group.section %}
-                                <hr class="my-1 mx-3">
-                                <small class="text-muted text-uppercase fw-bold px-3 py-1"
-                                       style="font-size:0.68rem; letter-spacing:0.08em;">
-                                    {{ group.section }}
-                                </small>
-                            {% endif %}
-
-                            {% for item in group.items %}
-                                <a href="{{ item.url }}"
-                                   class="nav-link {% if item.active %}active{% endif %} {{ item.class|default:'' }}"
-                                   {% if item.indent %}
-                                   style="padding-left:2.5rem;font-size:0.8rem;"
-                                   {% endif %}>
-                                    <i class="{{ item.icon }} me-2"></i>{{ item.title }}
-                                </a>
-                            {% endfor %}
-
-                        {% endfor %}
-
-                    </nav>
-                </div>
-            </div>
-
-            <div class="card mt-3 user-info-card">
-                <div class="card-body text-center">
-                    <div class="mb-3">
-                        <i class="fas fa-user-circle fa-3x text-primary"></i>
-                    </div>
-                    <h6 class="card-title">{{ user.get_full_name|default:user.username }}</h6>
-                    <p class="card-text text-muted small">{{ user.email }}</p>
-                    <small class="text-muted">Member since {{ user.date_joined|date:"M Y" }}</small>
-                </div>
-            </div>
-        </div>
-
-        <!-- Main content -->
-        <div class="col-md-9 col-lg-10">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h1 class="h2">Kanban Boards</h1>
-                <a href="{% url 'kanban:board_add' %}" class="btn btn-primary">
-                    <i class="fas fa-plus"></i> New Board
+            <div class="card-footer bg-white border-top-0 p-3 pt-0">
+                <a href="{{ board.get_absolute_url }}" class="btn btn-outline-primary w-100 fw-semibold rounded-3">
+                    Buka Board <i class="fas fa-arrow-right ms-1"></i>
                 </a>
-            </div>
-
-            <div class="row">
-                {% for board in boards %}
-                <div class="col-md-4 mb-4">
-                    <div class="card h-100 shadow-sm border-0">
-                        <div class="card-body">
-                            <h5 class="card-title">{{ board.name }}</h5>
-                            <p class="card-text text-muted small">{{ board.description|default:"No description"|truncatewords:20 }}</p>
-                            <p class="card-text">
-                                <small class="text-muted">
-                                    <i class="fas fa-columns me-1"></i> {{ board.columns.count }} Columns
-                                </small>
-                            </p>
-                        </div>
-                        <div class="card-footer bg-white border-top-0 p-3">
-                            <a href="{{ board.get_absolute_url }}" class="btn btn-outline-primary btn-sm w-100">
-                                Open Board
-                            </a>
-                        </div>
-                    </div>
-                </div>
-                {% empty %}
-                <div class="col-12">
-                    <div class="card border-0 shadow-sm p-5 text-center">
-                        <div class="mb-3">
-                            <i class="fas fa-columns fa-4x text-light"></i>
-                        </div>
-                        <h4>No boards found</h4>
-                        <p class="text-muted">Create your first board to start managing tasks.</p>
-                        <div class="mt-3">
-                            <a href="{% url 'kanban:board_add' %}" class="btn btn-primary">
-                                <i class="fas fa-plus"></i> Create Board
-                            </a>
-                        </div>
-                    </div>
-                </div>
-                {% endfor %}
             </div>
         </div>
     </div>
+    {% empty %}
+    <div class="col-12">
+        <div class="card border-0 shadow-sm p-5 text-center" style="border-radius: 16px;">
+            <div class="mb-3">
+                <div class="d-inline-flex align-items-center justify-content-center rounded-circle bg-light text-primary" style="width: 72px; height: 72px;">
+                    <i class="fas fa-columns fa-2x"></i>
+                </div>
+            </div>
+            <h4 class="fw-bold">Belum ada Kanban Board</h4>
+            <p class="text-muted">Buat board pertama Anda untuk mulai mengelola task dan alur kerja.</p>
+            <div class="mt-2">
+                <a href="{% url 'kanban:board_add' %}" class="btn btn-primary px-4 py-2">
+                    <i class="fas fa-plus me-1"></i> Buat Board Baru
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
 </div>
-<script>
-function toggleSidebar() {
-    document.body.classList.toggle('sidebar-open');
-}
-function closeSidebarOnResize() {
-    if (window.innerWidth > 768) {
-        document.body.classList.remove('sidebar-open');
-    }
-}
-window.addEventListener('resize', closeSidebarOnResize);
-</script>
 {% endblock %}

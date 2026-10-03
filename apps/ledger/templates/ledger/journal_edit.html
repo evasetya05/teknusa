@@ -1,14 +1,12 @@
+{% extends 'dashboard/base.html' %}
 {% load static %}
 {% load humanize %}
 
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Edit Jurnal - Modul Ledger</title>
-    <link rel="stylesheet" href="{% static 'ledger/css/journal_entry.css' %}">
-    <style>
+{% block title %}Edit Jurnal - Modul Ledger{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'ledger/css/journal_entry.css' %}">
+<style>
         /* ====== INLINE STYLES FOR GUARANTEED RENDERING ====== */
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -403,9 +401,14 @@
             box-shadow: 0 4px 8px rgba(37, 99, 235, 0.3);
         }
     </style>
-</head>
+{% endblock %}
 
-<body>
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <a href="{% url 'ledger:journal_list' %}" class="btn btn-outline-secondary btn-sm">
+        <i class="fas fa-arrow-left me-1"></i> Kembali ke Daftar Jurnal
+    </a>
+</div>
 <div class="container">
 
     <h2>Edit Jurnal</h2>
@@ -596,6 +599,8 @@
     </div>
 </div>
 
+{% endblock %}
+
+{% block extra_js %}
 <script src="{% static 'ledger/js/journal_entry.js' %}"></script>
-</body>
-</html>
+{% endblock %}

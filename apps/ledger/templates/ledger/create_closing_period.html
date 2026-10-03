@@ -1,18 +1,29 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <title>Buat Closing Bulanan</title>
-</head>
-<body>
-    <h2>Buat Closing Bulanan</h2>
-    <form method="post">
-        {% csrf_token %}
-        <label>Periode (format: YYYY-MM)</label>
-        <input type="text" name="period" placeholder="contoh: 2025-10" required>
-        <button type="submit">Simpan</button>
-    </form>
+{% extends 'dashboard/base.html' %}
 
-    <a href="{% url 'ledger:closing_period_list' %}">← Kembali ke daftar</a>
-</body>
-</html>
+{% block title %}Buat Closing Bulanan - Modul Ledger{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <a href="{% url 'ledger:closing_period_list' %}" class="btn btn-outline-secondary btn-sm">
+        <i class="fas fa-arrow-left me-1"></i> Kembali ke Daftar Closing Period
+    </a>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-md-6 col-lg-5">
+        <div class="card shadow-sm border-0">
+            <div class="card-body p-4">
+                <h2 class="h4 mb-4">Buat Closing Bulanan</h2>
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Periode (format: YYYY-MM)</label>
+                        <input type="text" name="period" class="form-control" placeholder="contoh: 2025-10" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">Simpan Periode</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

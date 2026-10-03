@@ -1,10 +1,28 @@
+{% extends 'dashboard/base.html' %}
 {% load static %}
 {% load humanize %}
 {% load ledger_extras %}
 
-<link rel="stylesheet" href="{% static 'ledger/css/journal_list.css' %}">
+{% block title %}Daftar Jurnal - Modul Ledger{% endblock %}
 
-<h2>📘 Daftar Jurnal</h2>
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'ledger/css/journal_list.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div class="d-flex align-items-center gap-2">
+        <a href="{% url 'ledger:ledger_index' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="fas fa-arrow-left me-1"></i> Dashboard Ledger
+        </a>
+        <h2 class="mb-0 fs-4 text-primary fw-bold">📘 Daftar Jurnal</h2>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{% url 'ledger:create_journal_entry' %}" class="btn btn-primary btn-sm">
+            <i class="fas fa-plus me-1"></i> Buat Jurnal Baru
+        </a>
+    </div>
+</div>
 
 {% for period, journals in grouped_journals.items %}
 <div class="period-section">
@@ -54,3 +72,4 @@
 {% empty %}
 <div class="alert alert-secondary">Belum ada jurnal.</div>
 {% endfor %}
+{% endblock %}
