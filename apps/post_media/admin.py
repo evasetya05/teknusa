@@ -83,3 +83,12 @@ class BiayaAdmin(admin.ModelAdmin):
     list_display = ('name', 'description')
     search_fields = ('name',)
     list_filter = ('name',)
+
+from post_media.models.konten import IdeKonten
+
+
+@admin.register(IdeKonten)
+class IdeKontenAdmin(admin.ModelAdmin):
+    list_display = ('teks', 'terkirim_telegram', 'created_at')
+    list_filter = ('terkirim_telegram',)
+    search_fields = ('teks',)
