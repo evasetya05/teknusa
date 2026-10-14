@@ -95,11 +95,12 @@ class TaskCreateView(LoginRequiredMixin, CreateView):
 
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
-        board_id = self.request.GET.get("board")
+        board_id = self.request.GET.get("board") or self.request.POST.get("board")
         if board_id:
             form.fields["column"].queryset = Column.objects.filter(
                 board_id=board_id
             )
+            form.fields["column"].label_from_instance = lambda obj: obj.name
         return form
 
 
@@ -107,6 +108,15 @@ class TaskUpdateView(LoginRequiredMixin, UpdateView):
     model = Task
     form_class = TaskForm
     template_name = "kanban/task_form.html"
+
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class)
+        if self.object and self.object.column:
+            form.fields["column"].queryset = Column.objects.filter(
+                board_id=self.object.column.board_id
+            )
+            form.fields["column"].label_from_instance = lambda obj: obj.name
+        return form
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
