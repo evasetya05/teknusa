@@ -12,6 +12,7 @@ def dashboard_view(request):
     """
     context = {}
     if is_briefing_admin(request.user):
-        context.update(build_briefings(request.session.get('current_entity_id')))
+        # Report per entity: always cover all active entities.
+        context.update(build_briefings("all"))
         context['show_briefing'] = True
     return render(request, 'dashboard/dashboard.html', context)

@@ -10,5 +10,5 @@ def briefing_view(request):
     """Full briefing page (admins only)."""
     if not is_briefing_admin(request.user):
         raise PermissionDenied
-    briefings = build_briefings(request.session.get("current_entity_id"))
+    briefings = build_briefings("all")
     return render(request, "agent/briefing.html", briefings)
