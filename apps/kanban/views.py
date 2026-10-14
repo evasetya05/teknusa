@@ -12,6 +12,15 @@ from django.shortcuts import get_object_or_404, redirect
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth import get_user_model
 from .forms import TaskForm
+from .calendar_utils import (
+    build_month_grid,
+    grid_range,
+    parse_month,
+    shift_month,
+)
+from django.db.models import Q
+from django.utils import timezone
+from datetime import date as date_cls
 
 from .models import (
     Board,
@@ -57,6 +66,48 @@ class BoardDetailView(LoginRequiredMixin, DetailView):
         return context
 
 
+class BoardCalendarView(LoginRequiredMixin, DetailView):
+    """Month calendar of a board's tasks, laid out by start/due date."""
+    model = Board
+    template_name = "kanban/board_calendar.html"
+    context_object_name = "board"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        today = timezone.localdate()
+        year, month = parse_month(self.request.GET.get("month"), today)
+        grid_start, grid_end = grid_range(year, month)
+
+        tasks = (
+            Task.objects.filter(column__board=self.object)
+            .exclude(start_date__isnull=True, due_date__isnull=True)
+            .filter(Q(start_date__lte=grid_end) | Q(start_date__isnull=True))
+            .filter(Q(due_date__gte=grid_start) | Q(due_date__isnull=True))
+        )
+
+        prev_y, prev_m = shift_month(year, month, -1)
+        next_y, next_m = shift_month(year, month, 1)
+        no_date_count = Task.objects.filter(
+            column__board=self.object,
+            completed=False,
+            start_date__isnull=True,
+            due_date__isnull=True,
+        ).count()
+
+        context.update(
+            {
+                "weeks": build_month_grid(year, month, tasks, today),
+                "month_label": date_cls(year, month, 1),
+                "prev_month": f"{prev_y:04d}-{prev_m:02d}",
+                "next_month": f"{next_y:04d}-{next_m:02d}",
+                "today_month": today.strftime("%Y-%m"),
+                "weekdays": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+                "no_date_count": no_date_count,
+            }
+        )
+        return context
+
+
 class BoardCreateView(LoginRequiredMixin, CreateView):
     model = Board
     fields = [
@@ -88,6 +139,16 @@ class TaskCreateView(LoginRequiredMixin, CreateView):
     model = Task
     form_class = TaskForm
     template_name = "kanban/task_form.html"
+
+    def get_initial(self):
+        initial = super().get_initial()
+        due = self.request.GET.get("due_date")
+        if due:
+            try:
+                initial["due_date"] = date_cls.fromisoformat(due)
+            except ValueError:
+                pass
+        return initial
 
     def form_valid(self, form):
         form.instance.created_by = self.request.user

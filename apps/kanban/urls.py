@@ -19,6 +19,12 @@ urlpatterns = [
     ),
 
     path(
+        'board/<int:pk>/calendar/',
+        BoardCalendarView.as_view(),
+        name='board_calendar'
+    ),
+
+    path(
         'board/add/',
         BoardCreateView.as_view(),
         name='board_add'

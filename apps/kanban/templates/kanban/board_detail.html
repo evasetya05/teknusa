@@ -244,6 +244,9 @@
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h1 class="h2">{{ board.name }}</h1>
                 <div>
+                    <a href="{% url 'kanban:board_calendar' board.pk %}" class="btn btn-outline-primary btn-sm me-1">
+                        <i class="far fa-calendar-alt"></i> Calendar
+                    </a>
                     <a href="{% url 'kanban:task_add' %}?board={{ board.pk }}" class="btn btn-primary btn-sm">
                         <i class="fas fa-plus"></i> Add Task
                     </a>
