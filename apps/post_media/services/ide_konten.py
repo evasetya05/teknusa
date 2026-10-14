@@ -82,13 +82,14 @@ def kirim_telegram(foto, caption):
     resp.raise_for_status()
 
 
-def jalankan():
+def jalankan(kirim=True):
     ide_teks = generate_ide(IdeKonten.histori_teks())
     ide = IdeKonten.simpan(ide_teks)
-    kirim_telegram(
-        buat_gambar(ide_teks),
-        f"Ide Instagram Nusasawit hari ini:\n\n{ide_teks}",
-    )
-    ide.terkirim_telegram = True
-    ide.save(update_fields=["terkirim_telegram"])
+    if kirim:
+        kirim_telegram(
+            buat_gambar(ide_teks),
+            f"Ide Instagram Nusasawit hari ini:\n\n{ide_teks}",
+        )
+        ide.terkirim_telegram = True
+        ide.save(update_fields=["terkirim_telegram"])
     return ide

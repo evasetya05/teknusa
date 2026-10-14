@@ -2,6 +2,7 @@
 from django.urls import path
 from post_media.views.post_media_home import post_media_home
 from post_media.views.channel import channel_list, channel_detail, channel_add, channel_edit, channel_analytics, update_performance, export_channel_analytics_excel
+from post_media.views.ide_konten import ide_konten_list, ide_konten_generate
 
 app_name = 'post_media'
 
@@ -14,6 +15,8 @@ urlpatterns = [
     path('analytics/', channel_analytics, name='channel_analytics'),
     path('analytics/export/', export_channel_analytics_excel, name='export_channel_analytics_excel'),
     path('channel/<int:pk>/update-performance/', update_performance, name='update_performance'),
+    path('ide-konten/', ide_konten_list, name='ide_konten'),
+    path('ide-konten/generate/', ide_konten_generate, name='ide_konten_generate'),
 
     
 ]
