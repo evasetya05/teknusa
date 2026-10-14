@@ -13,6 +13,12 @@ urlpatterns = [
     ),
 
     path(
+        'calendar/',
+        KanbanCalendarView.as_view(),
+        name='calendar'
+    ),
+
+    path(
         'board/<int:pk>/',
         BoardDetailView.as_view(),
         name='board_detail'

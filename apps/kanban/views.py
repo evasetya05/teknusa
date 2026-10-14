@@ -8,7 +8,7 @@ from django.views.generic import (
 from django.urls import reverse, reverse_lazy
 from django.http import JsonResponse
 from django.views import View
-from django.shortcuts import get_object_or_404, redirect
+from django.shortcuts import get_object_or_404, redirect, render
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth import get_user_model
 from .forms import TaskForm
@@ -66,20 +66,51 @@ class BoardDetailView(LoginRequiredMixin, DetailView):
         return context
 
 
-class BoardCalendarView(LoginRequiredMixin, DetailView):
-    """Month calendar of a board's tasks, laid out by start/due date."""
-    model = Board
+class KanbanCalendarView(LoginRequiredMixin, View):
+    """Month calendar of tasks across all boards (or a selected board), filtered by active entity."""
     template_name = "kanban/board_calendar.html"
-    context_object_name = "board"
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
+    def get(self, request, *args, **kwargs):
+        return self.render_calendar(request)
+
+    def render_calendar(self, request, selected_board=None):
         today = timezone.localdate()
-        year, month = parse_month(self.request.GET.get("month"), today)
+        year, month = parse_month(request.GET.get("month"), today)
         grid_start, grid_end = grid_range(year, month)
 
+        # Filter boards by current entity session
+        current_entity_id = request.session.get('current_entity_id')
+        boards = Board.objects.all()
+        if current_entity_id and current_entity_id != 'all':
+            boards = boards.filter(entity_id=current_entity_id)
+
+        board_id = request.GET.get("board")
+        if not selected_board and board_id:
+            try:
+                selected_board = boards.filter(pk=board_id).first()
+            except (ValueError, TypeError):
+                selected_board = None
+
+        if selected_board:
+            tasks_qs = Task.objects.filter(column__board=selected_board)
+            no_date_count = Task.objects.filter(
+                column__board=selected_board,
+                completed=False,
+                start_date__isnull=True,
+                due_date__isnull=True,
+            ).count()
+        else:
+            tasks_qs = Task.objects.filter(column__board__in=boards)
+            no_date_count = Task.objects.filter(
+                column__board__in=boards,
+                completed=False,
+                start_date__isnull=True,
+                due_date__isnull=True,
+            ).count()
+
         tasks = (
-            Task.objects.filter(column__board=self.object)
+            tasks_qs
+            .select_related('column__board')
             .exclude(start_date__isnull=True, due_date__isnull=True)
             .filter(Q(start_date__lte=grid_end) | Q(start_date__isnull=True))
             .filter(Q(due_date__gte=grid_start) | Q(due_date__isnull=True))
@@ -87,25 +118,28 @@ class BoardCalendarView(LoginRequiredMixin, DetailView):
 
         prev_y, prev_m = shift_month(year, month, -1)
         next_y, next_m = shift_month(year, month, 1)
-        no_date_count = Task.objects.filter(
-            column__board=self.object,
-            completed=False,
-            start_date__isnull=True,
-            due_date__isnull=True,
-        ).count()
 
-        context.update(
-            {
-                "weeks": build_month_grid(year, month, tasks, today),
-                "month_label": date_cls(year, month, 1),
-                "prev_month": f"{prev_y:04d}-{prev_m:02d}",
-                "next_month": f"{next_y:04d}-{next_m:02d}",
-                "today_month": today.strftime("%Y-%m"),
-                "weekdays": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
-                "no_date_count": no_date_count,
-            }
-        )
-        return context
+        context = {
+            "boards": boards,
+            "selected_board": selected_board,
+            "board": selected_board,  # for backward compatibility
+            "weeks": build_month_grid(year, month, tasks, today),
+            "month_label": date_cls(year, month, 1),
+            "prev_month": f"{prev_y:04d}-{prev_m:02d}",
+            "next_month": f"{next_y:04d}-{next_m:02d}",
+            "today_month": today.strftime("%Y-%m"),
+            "weekdays": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+            "no_date_count": no_date_count,
+        }
+        return render(request, self.template_name, context)
+
+
+class BoardCalendarView(KanbanCalendarView):
+    """Month calendar of a specific board's tasks."""
+
+    def get(self, request, pk, *args, **kwargs):
+        board = get_object_or_404(Board, pk=pk)
+        return self.render_calendar(request, selected_board=board)
 
 
 class BoardCreateView(LoginRequiredMixin, CreateView):

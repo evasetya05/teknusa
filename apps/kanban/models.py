@@ -30,6 +30,9 @@ class Board(models.Model):
     def get_absolute_url(self):
         return reverse('kanban:board_detail', args=[self.pk])
 
+    def get_calendar_url(self):
+        return reverse('kanban:board_calendar', args=[self.pk])
+
 
 class Column(models.Model):
     board = models.ForeignKey(

@@ -66,6 +66,7 @@ def build_month_grid(year, month, tasks, today):
                     ),
                     "is_start": day == start,
                     "is_end": day == end,
+                    "board_name": getattr(getattr(task, "column", None), "board", None).name if getattr(getattr(task, "column", None), "board", None) else "",
                 }
             )
             day += timedelta(days=1)

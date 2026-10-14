@@ -11,7 +11,10 @@
         </h1>
         <p class="text-muted mb-0 small">Kelola alur kerja dan kartu tugas secara visual.</p>
     </div>
-    <div>
+    <div class="d-flex gap-2">
+        <a href="{% url 'kanban:calendar' %}" class="btn btn-outline-primary">
+            <i class="far fa-calendar-alt me-1"></i> Kalender
+        </a>
         <a href="{% url 'kanban:board_add' %}" class="btn btn-primary">
             <i class="fas fa-plus me-1"></i> New Board
         </a>
@@ -34,9 +37,12 @@
                 <h5 class="card-title fw-bold text-dark mb-2">{{ board.name }}</h5>
                 <p class="card-text text-muted small mb-0">{{ board.description|default:"Tidak ada deskripsi board."|truncatewords:25 }}</p>
             </div>
-            <div class="card-footer bg-white border-top-0 p-3 pt-0">
-                <a href="{{ board.get_absolute_url }}" class="btn btn-outline-primary w-100 fw-semibold rounded-3">
+            <div class="card-footer bg-white border-top-0 p-3 pt-0 d-flex gap-2">
+                <a href="{{ board.get_absolute_url }}" class="btn btn-outline-primary flex-grow-1 fw-semibold rounded-3">
                     Buka Board <i class="fas fa-arrow-right ms-1"></i>
+                </a>
+                <a href="{% url 'kanban:board_calendar' board.pk %}" class="btn btn-outline-secondary rounded-3" title="Kalender Board">
+                    <i class="far fa-calendar-alt"></i>
                 </a>
             </div>
         </div>

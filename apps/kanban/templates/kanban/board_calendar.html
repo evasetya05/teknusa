@@ -33,19 +33,37 @@
     <nav aria-label="breadcrumb">
         <ol class="breadcrumb">
             <li class="breadcrumb-item"><a href="{% url 'kanban:board_list' %}">Boards</a></li>
-            <li class="breadcrumb-item"><a href="{{ board.get_absolute_url }}">{{ board.name }}</a></li>
+            {% if selected_board %}
+            <li class="breadcrumb-item"><a href="{{ selected_board.get_absolute_url }}">{{ selected_board.name }}</a></li>
+            {% endif %}
             <li class="breadcrumb-item active" aria-current="page">Calendar</li>
         </ol>
     </nav>
 
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-        <h1 class="h3 mb-0">{{ month_label|date:"F Y" }}</h1>
+        <div class="d-flex align-items-center flex-wrap gap-3">
+            <h1 class="h3 mb-0">{{ month_label|date:"F Y" }}</h1>
+            <form method="get" class="d-inline-flex align-items-center ms-md-2" id="board-select-form">
+                <input type="hidden" name="month" value="{{ request.GET.month|default:today_month }}">
+                <select name="board" class="form-select form-select-sm" onchange="this.form.submit()" style="min-width: 180px;">
+                    <option value="">Semua Board</option>
+                    {% for b in boards %}
+                    <option value="{{ b.pk }}" {% if selected_board and selected_board.pk == b.pk %}selected{% endif %}>{{ b.name }}</option>
+                    {% endfor %}
+                </select>
+            </form>
+        </div>
         <div class="d-flex align-items-center gap-1">
-            <a id="cal-prev" class="btn btn-outline-secondary btn-sm" href="?month={{ prev_month }}" aria-label="Previous month"><i class="fas fa-chevron-left"></i></a>
-            <a id="cal-today" class="btn btn-outline-secondary btn-sm" href="?month={{ today_month }}">Today</a>
-            <a id="cal-next" class="btn btn-outline-secondary btn-sm" href="?month={{ next_month }}" aria-label="Next month"><i class="fas fa-chevron-right"></i></a>
-            <a class="btn btn-outline-primary btn-sm ms-2" href="{{ board.get_absolute_url }}"><i class="fas fa-columns"></i> Board</a>
-            <a class="btn btn-primary btn-sm" href="{% url 'kanban:task_add' %}?board={{ board.pk }}"><i class="fas fa-plus"></i> Add Task</a>
+            <a id="cal-prev" class="btn btn-outline-secondary btn-sm" href="?month={{ prev_month }}{% if selected_board %}&board={{ selected_board.pk }}{% endif %}" aria-label="Previous month"><i class="fas fa-chevron-left"></i></a>
+            <a id="cal-today" class="btn btn-outline-secondary btn-sm" href="?month={{ today_month }}{% if selected_board %}&board={{ selected_board.pk }}{% endif %}">Today</a>
+            <a id="cal-next" class="btn btn-outline-secondary btn-sm" href="?month={{ next_month }}{% if selected_board %}&board={{ selected_board.pk }}{% endif %}" aria-label="Next month"><i class="fas fa-chevron-right"></i></a>
+            {% if selected_board %}
+            <a class="btn btn-outline-primary btn-sm ms-2" href="{{ selected_board.get_absolute_url }}"><i class="fas fa-columns"></i> Board</a>
+            <a class="btn btn-primary btn-sm" href="{% url 'kanban:task_add' %}?board={{ selected_board.pk }}"><i class="fas fa-plus"></i> Add Task</a>
+            {% else %}
+            <a class="btn btn-outline-primary btn-sm ms-2" href="{% url 'kanban:board_list' %}"><i class="fas fa-columns"></i> Boards</a>
+            <a class="btn btn-primary btn-sm" href="{% url 'kanban:task_add' %}"><i class="fas fa-plus"></i> Add Task</a>
+            {% endif %}
         </div>
     </div>
 
@@ -59,11 +77,15 @@
                 {% for day in week %}
                 <td class="{% if not day.in_month %}out{% endif %} {% if day.is_today %}today{% endif %}">
                     <span class="day-num">{{ day.date.day }}</span>
-                    <a class="add-day" title="Add task due {{ day.date|date:'d M' }}" href="{% url 'kanban:task_add' %}?board={{ board.pk }}&due_date={{ day.date|date:'Y-m-d' }}"><i class="fas fa-plus"></i></a>
+                    <a class="add-day" title="Add task due {{ day.date|date:'d M' }}" href="{% url 'kanban:task_add' %}{% if selected_board %}?board={{ selected_board.pk }}&due_date={{ day.date|date:'Y-m-d' }}{% else %}?due_date={{ day.date|date:'Y-m-d' }}{% endif %}"><i class="fas fa-plus"></i></a>
                     {% for t in day.tasks %}
                     <a href="{% url 'kanban:task_edit' t.id %}"
                        class="kcal-task p-{{ t.priority }}{% if t.completed %} done{% endif %}{% if t.overdue %} overdue{% endif %}{% if not t.is_start %} cont-left{% endif %}{% if not t.is_end %} cont-right{% endif %}"
-                       title="{{ t.title }} ({{ t.priority }}){% if t.overdue %} - overdue{% endif %}">{% if t.is_start or forloop.parentloop.counter0 == 0 %}{{ t.title }}{% else %}&nbsp;{% endif %}</a>
+                       title="{{ t.title }} ({{ t.priority }}){% if t.board_name %} [{{ t.board_name }}]{% endif %}{% if t.overdue %} - overdue{% endif %}">
+                       {% if t.is_start or forloop.parentloop.counter0 == 0 %}
+                         {% if not selected_board and t.board_name %}<span class="badge bg-light text-dark me-1" style="font-size:0.65rem;padding:1px 3px;">{{ t.board_name }}</span>{% endif %}{{ t.title }}
+                       {% else %}&nbsp;{% endif %}
+                    </a>
                     {% endfor %}
                     {% if day.more %}<div class="kcal-more">+{{ day.more }} more</div>{% endif %}
                 </td>
