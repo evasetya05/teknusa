@@ -1,4 +1,6 @@
+import io
 import time
+import unittest
 
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
@@ -65,3 +67,26 @@ def llm_test_view(request):
                 "seconds": round(time.monotonic() - started, 2),
             })
     return JsonResponse({"ok": all(r["ok"] for r in results), "results": results})
+
+
+@login_required
+@require_POST
+def llm_test_suite_view(request):
+    """Run unit tests from apps/agent/test_llm.py and return report."""
+    if not is_briefing_admin(request.user):
+        raise PermissionDenied
+    from agent import test_llm
+    suite = unittest.defaultTestLoader.loadTestsFromModule(test_llm)
+    stream = io.StringIO()
+    runner = unittest.TextTestRunner(stream=stream, verbosity=2)
+    started = time.monotonic()
+    result = runner.run(suite)
+    duration = round(time.monotonic() - started, 2)
+    return JsonResponse({
+        "ok": result.wasSuccessful(),
+        "tests_run": result.testsRun,
+        "errors": len(result.errors),
+        "failures": len(result.failures),
+        "duration": duration,
+        "output": stream.getvalue(),
+    })

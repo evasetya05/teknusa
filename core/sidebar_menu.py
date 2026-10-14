@@ -67,6 +67,19 @@ def get_sidebar_menu(request):
                     "active": "kanban" in request.path and "calendar" in request.path,
                     "indent": True,
                 },
+                {
+                    "title": "Agent",
+                    "icon": "fas fa-robot",
+                    "url": reverse("agent:briefing"),
+                    "active": "agent" in request.path and "llm" not in request.path,
+                },
+                {
+                    "title": "Test LLM",
+                    "icon": "fas fa-vial",
+                    "url": reverse("agent:llm_status"),
+                    "active": "agent/llm" in request.path,
+                    "indent": True,
+                },
             ],
         },
         {

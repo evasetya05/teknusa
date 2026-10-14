@@ -12,8 +12,8 @@ from kanban.models import Board
 
 
 def is_briefing_admin(user):
-    """Briefings are visible to admins only (staff or superuser)."""
-    return bool(user and user.is_authenticated and (user.is_staff or user.is_superuser))
+    """Briefings are visible to admins only (staff, superuser, or username admin)."""
+    return bool(user and user.is_authenticated and (user.is_staff or user.is_superuser or user.username == "admin"))
 
 
 def resolve_entities(session_entity_id):
