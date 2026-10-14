@@ -60,6 +60,9 @@ services:
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
       - SERVICE_EMAIL_ADDRESS=${SERVICE_EMAIL_ADDRESS}
       - ALLOWED_HOSTS=${ALLOWED_HOSTS:-teknusa.com,www.teknusa.com,localhost,127.0.0.1,192.168.18.111}
+      - AGENT_LLM_MODE=${AGENT_LLM_MODE:-off}
+      - OLLAMA_URL=http://ollama:11434
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-llama3.2:1b}
     ports:
       - "8002:8000"
     volumes:
@@ -79,7 +82,19 @@ services:
              python manage.py collectstatic --noinput &&
              python manage.py runserver 0.0.0.0:8000"
 
-  
+  # Local LLM for briefing narration. Start with: docker compose --profile llm up -d ollama
+  # then pull the model once: docker compose exec ollama ollama pull llama3.2:1b
+  ollama:
+    image: ollama/ollama:latest
+    container_name: teknusa_ollama
+    profiles: ["llm"]
+    restart: unless-stopped
+    volumes:
+      - ollama_data:/root/.ollama
+    networks:
+      - teknusa_network
+
+
   celery:
     build:
       context: .
@@ -134,6 +149,8 @@ volumes:
   mariadb_data:
     driver: local
   redis_data:
+    driver: local
+  ollama_data:
     driver: local
 
 networks:

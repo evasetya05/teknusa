@@ -55,6 +55,7 @@ urlpatterns = [
     path('entity/', include('entity.urls', namespace='entity')),
     path('post_media/', include('post_media.urls')),
     path('kanban/', include('kanban.urls', namespace='kanban')),
+    path('agent/', include('agent.urls', namespace='agent')),
     path('game/', include('apps.game.urls')), 
 
     path('search/', include('haystack.urls'), name='search'),

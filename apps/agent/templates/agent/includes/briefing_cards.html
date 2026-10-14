@@ -1,0 +1,60 @@
+{# Reusable briefing cards. Expects `finance` and `kanban` lists from agent.briefing.build_briefings #}
+<style>
+.brief-card { border: 0; box-shadow: 0 .125rem .5rem rgba(0,0,0,.08); border-left: 5px solid #adb5bd; }
+.brief-card.status-green { border-left-color: #198754; }
+.brief-card.status-yellow { border-left-color: #f0ad00; }
+.brief-card.status-red { border-left-color: #dc3545; }
+.brief-dot { display: inline-block; width: .7rem; height: .7rem; border-radius: 50%; margin-right: .4rem; background: #adb5bd; }
+.status-green .brief-dot { background: #198754; }
+.status-yellow .brief-dot { background: #f0ad00; }
+.status-red .brief-dot { background: #dc3545; }
+.brief-alerts li { margin-bottom: .25rem; }
+.sev-critical { color: #dc3545; font-weight: 600; }
+.sev-warning { color: #b88400; }
+.sev-info { color: #6c757d; }
+</style>
+
+<h2 class="h5 mt-2 mb-3"><i class="fas fa-coins me-2 text-primary"></i>Finance status</h2>
+{% for b in finance %}
+<div class="card brief-card status-{{ b.status }} mb-3" id="finance-brief-{{ b.entity.id }}">
+  <div class="card-body">
+    <h3 class="h6 mb-2"><span class="brief-dot"></span>{{ b.entity.name }}</h3>
+    <p class="mb-2">{{ b.narration }}{% if b.narration_source != "template" %} <span class="badge bg-light text-muted border" title="Written by {{ b.narration_source }}">AI</span>{% endif %}</p>
+    {% if b.alerts %}
+    <ul class="brief-alerts small mb-0 ps-3">
+      {% for a in b.alerts %}<li class="sev-{{ a.severity }}">{{ a.message }}</li>{% endfor %}
+    </ul>
+    {% endif %}
+  </div>
+</div>
+{% empty %}
+<p class="text-muted">No active entity to report on.</p>
+{% endfor %}
+
+<h2 class="h5 mt-4 mb-3"><i class="fas fa-columns me-2 text-primary"></i>Kanban status (daily)</h2>
+{% for b in kanban %}
+<div class="card brief-card status-{{ b.status }} mb-3" id="kanban-brief-{{ b.metrics.board_id }}">
+  <div class="card-body">
+    <h3 class="h6 mb-2"><span class="brief-dot"></span>{{ b.metrics.board }}</h3>
+    <p class="mb-2">{{ b.narration }}{% if b.narration_source != "template" %} <span class="badge bg-light text-muted border" title="Written by {{ b.narration_source }}">AI</span>{% endif %}</p>
+    {% if b.alerts %}
+    <ul class="brief-alerts small mb-2 ps-3">
+      {% for a in b.alerts %}<li class="sev-{{ a.severity }}">{{ a.message }}</li>{% endfor %}
+    </ul>
+    {% endif %}
+    {% if b.metrics.top_tasks %}
+    <div class="small text-muted">Priorities today:</div>
+    <ul class="small mb-0 ps-3">
+      {% for t in b.metrics.top_tasks %}
+      <li>
+        <a href="{% url 'kanban:task_edit' t.id %}">{{ t.title }}</a>
+        <span class="text-muted">({{ t.priority }}{% if t.due_date %}, due {{ t.due_date|date:"d M" }}{% endif %}{% if t.days_overdue %}, {{ t.days_overdue }}d overdue{% endif %})</span>
+      </li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+  </div>
+</div>
+{% empty %}
+<p class="text-muted">No boards to report on.</p>
+{% endfor %}

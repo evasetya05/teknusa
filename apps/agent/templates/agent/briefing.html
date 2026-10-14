@@ -1,0 +1,14 @@
+{% extends "main/layout.html" %}
+
+{% block content %}
+<div class="container mt-5 pt-3">
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
+      <li class="breadcrumb-item active" aria-current="page">Briefing</li>
+    </ol>
+  </nav>
+  <h1 class="h3 mb-4">Daily briefing</h1>
+  {% include "agent/includes/briefing_cards.html" %}
+</div>
+{% endblock %}

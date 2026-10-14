@@ -58,6 +58,7 @@ INSTALLED_APPS = [
     'ledger',
     'post_media',
     'kanban',
+    'agent',
     'apps.game.apps.GameConfig',
 
     'haystack',
@@ -261,3 +262,13 @@ SECURE_CONTENT_TYPE_NOSNIFF = True
 
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap4"
 CRISPY_TEMPLATE_PACK = "bootstrap4"
+
+# Briefing agent LLM (mode: off | local | auto). Default off = template text only.
+AGENT_LLM = {
+    "mode": os.getenv("AGENT_LLM_MODE", "off"),
+    "local": {
+        "url": os.getenv("OLLAMA_URL", "http://ollama:11434"),
+        "model": os.getenv("OLLAMA_MODEL", "llama3.2:1b"),
+        "timeout": int(os.getenv("OLLAMA_TIMEOUT", "20")),
+    },
+}

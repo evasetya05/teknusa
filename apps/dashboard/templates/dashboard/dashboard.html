@@ -229,7 +229,9 @@
         <!-- Main content -->
         <div class="col-md-9 col-lg-10">
             <h1 class="mb-4">Dashboard</h1>
-            <!-- Cards removed as requested -->
+            {% if show_briefing %}
+                {% include "agent/includes/briefing_cards.html" %}
+            {% endif %}
         </div>
     </div>
 </div>
