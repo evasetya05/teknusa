@@ -310,3 +310,118 @@ class ManualSelectionTests(SimpleTestCase):
             self.assertEqual(len(get_chain()), 1)
             clear_override()
             self.assertEqual(get_chain(), [])
+
+
+class UiApiKeyTests(ManualSelectionTests):
+    """Gemini key entered from the frontend: encrypted at rest, precedence, keep/clear."""
+
+    KEY = "AIzaSyFAKEKEYFORTESTING1234567890"
+
+    def _env(self):
+        return override_settings(
+            AGENT_LLM={"gemini": {"api_key": "ENVKEY-ENVKEY-ENVKEY-ENV"}},
+            AGENT_LLM_OVERRIDE_FILE=self.path,
+        )
+
+    def test_key_is_encrypted_on_disk_and_overrides_env(self):
+        from agent.providers import get_config
+        from agent.providers.runtime import clean_override, save_override
+
+        with self._env():
+            save_override(clean_override(self._form(gemini_api_key=self.KEY)))
+            self.assertNotIn(self.KEY, open(self.path).read())
+            self.assertEqual(get_config()["gemini"]["api_key"], self.KEY)
+            self.assertEqual(get_config()["gemini"]["key_source"], "ui")
+
+    def test_blank_keeps_key_and_clear_falls_back_to_env(self):
+        from agent.providers import get_config
+        from agent.providers.runtime import clean_override, save_override
+
+        with self._env():
+            save_override(clean_override(self._form(gemini_api_key=self.KEY)))
+            save_override(clean_override(self._form(gemini_api_key="")))
+            self.assertEqual(get_config()["gemini"]["key_source"], "ui")
+            save_override(clean_override(self._form(clear_gemini_key="1")))
+            self.assertEqual(get_config()["gemini"]["key_source"], "env")
+
+    def test_invalid_key_format_rejected(self):
+        from agent.providers.runtime import clean_override
+
+        with self.assertRaises(ValueError):
+            clean_override(self._form(gemini_api_key="short key!"))
+
+    def test_changed_secret_key_makes_stored_key_unusable(self):
+        from agent.providers.runtime import clean_override, get_stored_api_key, save_override
+
+        with self._env():
+            save_override(clean_override(self._form(gemini_api_key=self.KEY)))
+            with override_settings(SECRET_KEY="another-secret"):
+                self.assertEqual(get_stored_api_key(), "")
+
+
+class ChatTests(SimpleTestCase):
+    FACTS = "Alpha: laba bersih 2026-10 adalah Rp 6,000,000 (pendapatan Rp 10,000,000, beban Rp 4,000,000)."
+
+    def _ask(self, provider, question="Berapa laba?", history=None, facts=None):
+        from agent.chat import answer_question
+
+        return answer_question(question, history, facts=facts or self.FACTS, providers=[provider] if provider else [])
+
+    def test_valid_answer_is_returned_with_provider_name(self):
+        result = self._ask(FakeProvider(output="Laba bersih Rp 6,000,000."))
+        self.assertEqual(result, {"answer": "Laba bersih Rp 6,000,000.", "source": "fake"})
+
+    def test_invented_number_is_rejected_to_fallback(self):
+        result = self._ask(FakeProvider(output="Laba bersih Rp 7,500,000."))
+        self.assertEqual(result["source"], "fallback")
+        self.assertIn(self.FACTS, result["answer"])
+
+    def test_number_from_users_question_is_allowed(self):
+        result = self._ask(FakeProvider(output="Untuk 2026 datanya ada."), question="Bagaimana 2026?")
+        self.assertEqual(result["source"], "fake")
+
+    def test_provider_error_falls_back(self):
+        result = self._ask(FakeProvider(error=ProviderError("down")))
+        self.assertEqual(result["source"], "fallback")
+
+    def test_next_provider_is_tried(self):
+        from agent.chat import answer_question
+
+        bad = FakeProvider(error=ProviderError("down"))
+        good = FakeProvider(output="Laba Rp 6,000,000.")
+        good.name = "good"
+        result = answer_question("q", None, facts=self.FACTS, providers=[bad, good])
+        self.assertEqual(result["source"], "good")
+
+    def test_off_mode_returns_fallback_without_calling_llm(self):
+        result = self._ask(None)
+        self.assertEqual(result["source"], "fallback")
+        self.assertIn("nonaktif", result["answer"])
+
+    def test_prompt_contains_facts_question_and_history(self):
+        provider = FakeProvider(output="Laba Rp 6,000,000.")
+        seen = []
+        provider.generate = lambda prompt: seen.append(prompt) or "Laba Rp 6,000,000."
+        history = [{"role": "user", "text": "halo"}, {"role": "assistant", "text": "hai"}, {"role": "x", "text": "bad"}]
+        self._ask(provider, question="Berapa laba?", history=history)
+        self.assertIn(self.FACTS, seen[0])
+        self.assertIn("PERTANYAAN: Berapa laba?", seen[0])
+        self.assertIn("Pengguna: halo", seen[0])
+        self.assertNotIn("bad", seen[0])
+
+    def test_history_is_cleaned_and_capped(self):
+        from agent.chat import MAX_HISTORY_TURNS, clean_history
+
+        turns = [{"role": "user", "text": f"t{i}"} for i in range(20)] + ["junk", {"role": "user", "text": 5}]
+        cleaned = clean_history(turns)
+        self.assertEqual(len(cleaned), MAX_HISTORY_TURNS)
+        self.assertEqual(clean_history("not a list"), [])
+
+    def test_rate_limit(self):
+        from agent.chat import RATE_LIMIT, rate_limited
+
+        cache.clear()
+        results = [rate_limited(999) for _ in range(RATE_LIMIT + 1)]
+        self.assertFalse(any(results[:RATE_LIMIT]))
+        self.assertTrue(results[-1])
+        cache.clear()

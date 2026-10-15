@@ -1,4 +1,5 @@
 import io
+import json
 import time
 import unittest
 
@@ -9,9 +10,12 @@ from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.views.decorators.http import require_POST
 
+from agent import chat
 from agent.briefing import build_briefings, is_briefing_admin
 from agent.providers import ProviderError, get_chain, get_config
-from agent.providers.runtime import MODES, clean_override, clear_override, load_override, save_override
+from agent.providers.runtime import (
+    MODES, clean_override, clear_override, get_stored_api_key, key_hint, load_override, save_override,
+)
 
 
 @login_required
@@ -34,6 +38,8 @@ def llm_status_view(request):
         "local": config.get("local"),
         "gemini": config.get("gemini"),
         "gemini_key_set": bool(config["gemini"].get("api_key")),
+        "gemini_key_source": config["gemini"].get("key_source"),
+        "gemini_key_hint": key_hint(get_stored_api_key()),
         "modes": MODES,
         "overridden": bool(load_override()),
         "enabled": bool(get_chain()),
@@ -64,6 +70,27 @@ def llm_settings_view(request):
         else:
             messages.success(request, "Pengaturan agent AI disimpan.")
     return redirect("agent:llm_status")
+
+
+@login_required
+@require_POST
+def chat_view(request):
+    """Dashboard chat about the reports (admins only). Body: {message, history[]}."""
+    if not is_briefing_admin(request.user):
+        raise PermissionDenied
+    try:
+        payload = json.loads(request.body.decode("utf-8") or "{}")
+    except ValueError:
+        return JsonResponse({"ok": False, "error": "Permintaan tidak valid."}, status=400)
+    message = payload.get("message") if isinstance(payload, dict) else None
+    if not isinstance(message, str) or not message.strip():
+        return JsonResponse({"ok": False, "error": "Pertanyaan kosong."}, status=400)
+    if len(message) > chat.MAX_QUESTION_CHARS:
+        return JsonResponse({"ok": False, "error": "Pertanyaan terlalu panjang."}, status=400)
+    if chat.rate_limited(request.user.pk):
+        return JsonResponse({"ok": False, "error": "Terlalu banyak permintaan, coba sesaat lagi."}, status=429)
+    result = chat.answer_question(message, payload.get("history"))
+    return JsonResponse({"ok": True, **result})
 
 
 @login_required

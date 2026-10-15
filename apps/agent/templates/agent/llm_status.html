@@ -63,8 +63,16 @@
           <div class="col-md-6" data-group="gemini">
             <div class="border rounded-3 p-3 h-100">
               <div class="fw-bold small mb-2"><i class="fas fa-cloud me-1"></i>API (Gemini)
-                {% if gemini_key_set %}<span class="badge bg-success ms-1">API key terpasang</span>{% else %}<span class="badge bg-danger ms-1">GEMINI_API_KEY belum diset</span>{% endif %}
+                {% if gemini_key_set %}<span class="badge bg-success ms-1">API key terpasang ({% if gemini_key_source == 'ui' %}dari halaman ini {{ gemini_key_hint }}{% else %}dari environment{% endif %})</span>{% else %}<span class="badge bg-danger ms-1">API key belum diisi</span>{% endif %}
               </div>
+              <label class="form-label small" for="id_gemini_api_key">API Key</label>
+              <input type="password" class="form-control form-control-sm mb-1" id="id_gemini_api_key" name="gemini_api_key" autocomplete="new-password" placeholder="{% if gemini_key_source == 'ui' %}Kosongkan untuk tetap memakai key tersimpan{% else %}Tempel API key Gemini{% endif %}">
+              {% if gemini_key_source == 'ui' %}
+              <div class="form-check mb-2">
+                <input class="form-check-input" type="checkbox" id="id_clear_gemini_key" name="clear_gemini_key" value="1">
+                <label class="form-check-label small" for="id_clear_gemini_key">Hapus key tersimpan</label>
+              </div>
+              {% endif %}
               <label class="form-label small" for="id_gemini_model">Model</label>
               <input class="form-control form-control-sm mb-2" id="id_gemini_model" name="gemini_model" list="gemini-models" value="{{ gemini.model }}" required>
               <datalist id="gemini-models">
@@ -72,7 +80,7 @@
               </datalist>
               <label class="form-label small" for="id_gemini_timeout">Timeout (detik)</label>
               <input type="number" min="1" max="300" class="form-control form-control-sm" id="id_gemini_timeout" name="gemini_timeout" value="{{ gemini.timeout }}" required>
-              <div class="form-text">API key dibaca dari environment server dan tidak pernah ditampilkan.</div>
+              <div class="form-text">Key disimpan terenkripsi di server dan tidak pernah ditampilkan kembali. Key di sini menggantikan GEMINI_API_KEY dari environment.</div>
             </div>
           </div>
         </div>

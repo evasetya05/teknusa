@@ -7,14 +7,15 @@ Modes:
   auto   - ordered chain: local Ollama first, then Gemini (if an API key is set)
 
 Precedence: defaults < settings.AGENT_LLM (environment) < manual override saved
-from the /agent/llm/ page (see ``runtime``). API keys only come from settings.
+from the /agent/llm/ page (see ``runtime``). A Gemini key saved from the UI
+(stored encrypted) wins over GEMINI_API_KEY in the environment.
 """
 from django.conf import settings
 
 from .base import NarrationProvider, ProviderError  # noqa: F401
 from .gemini import GeminiProvider
 from .ollama import OllamaProvider
-from .runtime import load_override
+from .runtime import get_stored_api_key, load_override
 
 DEFAULT_CONFIG = {
     "mode": "off",
@@ -33,9 +34,15 @@ def get_config():
         merged = dict(DEFAULT_CONFIG[section])
         merged.update(config.get(section) or {})
         for key, value in (override.get(section) or {}).items():
-            if key != "api_key":
+            if key not in ("api_key", "api_key_enc"):
                 merged[key] = value
         config[section] = merged
+    stored_key = get_stored_api_key()
+    if stored_key:
+        config["gemini"]["api_key"] = stored_key
+    config["gemini"]["key_source"] = (
+        "ui" if stored_key else ("env" if config["gemini"].get("api_key") else "none")
+    )
     return config
 
 
