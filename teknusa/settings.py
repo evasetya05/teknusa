@@ -263,12 +263,18 @@ SECURE_CONTENT_TYPE_NOSNIFF = True
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap4"
 CRISPY_TEMPLATE_PACK = "bootstrap4"
 
-# Briefing agent LLM (mode: off | local | auto). Default off = template text only.
+# Briefing agent LLM (mode: off | local | gemini | auto). Default off = template text only.
+# Can be overridden manually at /agent/llm/ (saved in private/agent_llm.json).
 AGENT_LLM = {
     "mode": os.getenv("AGENT_LLM_MODE", "off"),
     "local": {
         "url": os.getenv("OLLAMA_URL", "http://ollama:11434"),
         "model": os.getenv("OLLAMA_MODEL", "llama3.2:1b"),
         "timeout": int(os.getenv("OLLAMA_TIMEOUT", "20")),
+    },
+    "gemini": {
+        "api_key": os.getenv("GEMINI_API_KEY", ""),
+        "model": os.getenv("GEMINI_MODEL", "gemini-2.5-flash"),
+        "timeout": int(os.getenv("GEMINI_TIMEOUT", "30")),
     },
 }

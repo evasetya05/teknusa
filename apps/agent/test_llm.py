@@ -205,3 +205,108 @@ class LiveOllamaIntegrationTests(SimpleTestCase):
     def test_real_generate_returns_text(self):
         text = self.provider.generate("Balas dengan satu kata: OK")
         self.assertTrue(text.strip())
+
+
+class GeminiProviderTests(SimpleTestCase):
+    def _response(self, body):
+        resp = mock.MagicMock()
+        resp.read.return_value = json.dumps(body).encode()
+        resp.__enter__.return_value = resp
+        return resp
+
+    def test_returns_text_and_sends_key_in_header_not_url(self):
+        from agent.providers.gemini import GeminiProvider
+
+        body = {"candidates": [{"content": {"parts": [{"text": " Halo "}]}}]}
+        with mock.patch("urllib.request.urlopen", return_value=self._response(body)) as urlopen:
+            text = GeminiProvider(api_key="SECRET", model="gemini-2.5-flash").generate("p")
+        request = urlopen.call_args.args[0]
+        self.assertEqual(text, "Halo")
+        self.assertNotIn("SECRET", request.full_url)
+        self.assertEqual(request.get_header("X-goog-api-key"), "SECRET")
+        self.assertIn("gemini-2.5-flash:generateContent", request.full_url)
+
+    def test_missing_key_raises(self):
+        from agent.providers.gemini import GeminiProvider
+
+        with self.assertRaises(ProviderError):
+            GeminiProvider(api_key="").generate("p")
+
+    def test_http_error_does_not_leak_key(self):
+        import urllib.error
+
+        from agent.providers.gemini import GeminiProvider
+
+        err = urllib.error.HTTPError("http://x?key=SECRET", 403, "no", {}, None)
+        with mock.patch("urllib.request.urlopen", side_effect=err):
+            with self.assertRaises(ProviderError) as ctx:
+                GeminiProvider(api_key="SECRET").generate("p")
+        self.assertNotIn("SECRET", str(ctx.exception))
+
+    def test_bad_shapes_raise(self):
+        from agent.providers.gemini import GeminiProvider
+
+        for body in ({}, {"candidates": []}, {"candidates": [{"content": {"parts": [{"text": ""}]}}]}):
+            with mock.patch("urllib.request.urlopen", return_value=self._response(body)):
+                with self.assertRaises(ProviderError):
+                    GeminiProvider(api_key="k").generate("p")
+
+
+class ManualSelectionTests(SimpleTestCase):
+    def setUp(self):
+        import tempfile
+
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.path = f"{self.tmp.name}/agent_llm.json"
+
+    def _form(self, **kw):
+        data = {
+            "mode": "gemini", "local_url": "http://172.18.0.1:11434", "local_model": "llama3.2:1b",
+            "local_timeout": "20", "gemini_model": "gemini-2.5-flash", "gemini_timeout": "30",
+        }
+        data.update(kw)
+        return data
+
+    def test_clean_rejects_bad_input(self):
+        from agent.providers.runtime import clean_override
+
+        for bad in (
+            {"mode": "weird"}, {"local_url": "file:///etc/passwd"}, {"local_model": "a b;rm"},
+            {"gemini_timeout": "0"}, {"local_timeout": "abc"},
+        ):
+            with self.assertRaises(ValueError):
+                clean_override(self._form(**bad))
+
+    def test_override_selects_provider_and_never_stores_key(self):
+        from agent.providers import get_config
+        from agent.providers.gemini import GeminiProvider
+        from agent.providers.runtime import clean_override, save_override
+
+        env = {"mode": "off", "gemini": {"api_key": "SECRET", "model": "x", "timeout": 5}}
+        with override_settings(AGENT_LLM=env, AGENT_LLM_OVERRIDE_FILE=self.path):
+            save_override(clean_override(self._form(mode="gemini")))
+            chain = get_chain()
+            self.assertEqual([type(p) for p in chain], [GeminiProvider])
+            self.assertEqual(chain[0].model, "gemini-2.5-flash")
+            self.assertEqual(chain[0].api_key, "SECRET")
+            self.assertNotIn("SECRET", open(self.path).read())
+            self.assertEqual(get_config()["mode"], "gemini")
+
+    def test_auto_orders_local_then_gemini_and_skips_gemini_without_key(self):
+        from agent.providers.runtime import clean_override, save_override
+
+        with override_settings(AGENT_LLM={"gemini": {"api_key": "k"}}, AGENT_LLM_OVERRIDE_FILE=self.path):
+            save_override(clean_override(self._form(mode="auto")))
+            self.assertEqual([p.name for p in get_chain()], ["ollama", "gemini"])
+        with override_settings(AGENT_LLM={}, AGENT_LLM_OVERRIDE_FILE=self.path):
+            self.assertEqual([p.name for p in get_chain()], ["ollama"])
+
+    def test_clear_override_returns_to_env(self):
+        from agent.providers.runtime import clean_override, clear_override, save_override
+
+        with override_settings(AGENT_LLM={"mode": "off"}, AGENT_LLM_OVERRIDE_FILE=self.path):
+            save_override(clean_override(self._form(mode="local")))
+            self.assertEqual(len(get_chain()), 1)
+            clear_override()
+            self.assertEqual(get_chain(), [])

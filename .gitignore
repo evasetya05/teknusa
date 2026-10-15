@@ -59,3 +59,6 @@ logs/
 *.bak
 *.tmp
 *.swp
+
+# Manual agent LLM selection (runtime)
+private/agent_llm.json

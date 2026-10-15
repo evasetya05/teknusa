@@ -63,6 +63,8 @@ services:
       - AGENT_LLM_MODE=${AGENT_LLM_MODE:-local}
       - OLLAMA_URL=${OLLAMA_URL:-http://172.18.0.1:11434}
       - OLLAMA_MODEL=${OLLAMA_MODEL:-llama3.2:1b}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - GEMINI_MODEL=${GEMINI_MODEL:-gemini-2.5-flash}
     ports:
       - "8002:8000"
     volumes:
