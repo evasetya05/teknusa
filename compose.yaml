@@ -60,8 +60,8 @@ services:
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
       - SERVICE_EMAIL_ADDRESS=${SERVICE_EMAIL_ADDRESS}
       - ALLOWED_HOSTS=${ALLOWED_HOSTS:-teknusa.com,www.teknusa.com,localhost,127.0.0.1,192.168.18.111}
-      - AGENT_LLM_MODE=${AGENT_LLM_MODE:-off}
-      - OLLAMA_URL=http://ollama:11434
+      - AGENT_LLM_MODE=${AGENT_LLM_MODE:-local}
+      - OLLAMA_URL=${OLLAMA_URL:-http://172.18.0.1:11434}
       - OLLAMA_MODEL=${OLLAMA_MODEL:-llama3.2:1b}
     ports:
       - "8002:8000"

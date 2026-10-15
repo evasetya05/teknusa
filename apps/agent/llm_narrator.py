@@ -20,10 +20,11 @@ MAX_OUTPUT_CHARS = 600
 _NUMBER_RE = re.compile(r"\d[\d.,]*")
 
 PROMPT = (
-    "You are a concise business assistant. Rewrite the FACTS below as a short, "
-    "clear status update in English, at most 3 sentences. Use ONLY the facts "
-    "given. Do not invent, round, or add any numbers. Do not give advice that "
-    "is not implied by the facts. Output plain text only.\n\nFACTS:\n{facts}\n"
+    "Anda asisten bisnis yang ringkas. Tulis ulang FAKTA di bawah sebagai "
+    "laporan status singkat dalam bahasa Indonesia, maksimal 3 kalimat. "
+    "Gunakan HANYA fakta yang diberikan. Jangan mengarang, membulatkan, atau "
+    "menambah angka apa pun. Jangan menghitung ulang. Jangan memberi saran "
+    "yang tidak tersirat dari fakta. Keluarkan teks biasa saja.\n\nFAKTA:\n{facts}\n"
 )
 
 

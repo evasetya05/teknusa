@@ -36,7 +36,12 @@ class OllamaProvider(NarrationProvider):
         except (urllib.error.URLError, TimeoutError, OSError, ValueError) as exc:
             raise ProviderError(f"ollama request failed: {exc}") from exc
 
-        text = (body.get("response") or "").strip()
+        if not isinstance(body, dict):
+            raise ProviderError("ollama returned an unexpected response format")
+        raw = body.get("response") or ""
+        if not isinstance(raw, str):
+            raise ProviderError("ollama returned a non-text response")
+        text = raw.strip()
         if not text:
             raise ProviderError("ollama returned an empty response")
         return text
