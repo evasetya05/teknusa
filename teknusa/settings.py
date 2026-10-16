@@ -266,7 +266,7 @@ CRISPY_TEMPLATE_PACK = "bootstrap4"
 # Briefing agent LLM (mode: off | local | gemini | auto). Default off = template text only.
 # Can be overridden manually at /agent/llm/ (saved in private/agent_llm.json).
 AGENT_LLM = {
-    "mode": os.getenv("AGENT_LLM_MODE", "off"),
+    "mode": os.getenv("AGENT_LLM_MODE", "gemini"),
     "local": {
         "url": os.getenv("OLLAMA_URL", "http://ollama:11434"),
         "model": os.getenv("OLLAMA_MODEL", "llama3.2:1b"),

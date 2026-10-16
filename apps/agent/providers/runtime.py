@@ -60,16 +60,17 @@ def clean_override(data):
     mode = str(data.get("mode", "")).lower()
     if mode not in MODES:
         raise ValueError("Mode tidak valid.")
-    url = str(data.get("local_url", "")).strip()
-    if not re.match(r"^https?://[^\s/]+(:\d+)?/?$", url):
-        raise ValueError("URL Ollama harus berformat http(s)://host:port.")
-    local_model = str(data.get("local_model", "")).strip()
-    gemini_model = str(data.get("gemini_model", "")).strip()
+    url = str(data.get("local_url", "")).strip() or "http://ollama:11434"
+    if mode in ("local", "auto"):
+        if not re.match(r"^https?://[^\s/]+(:\d+)?/?$", url):
+            raise ValueError("URL Ollama harus berformat http(s)://host:port.")
+    local_model = str(data.get("local_model", "")).strip() or "llama3.2:1b"
+    gemini_model = str(data.get("gemini_model", "")).strip() or "gemini-3.8-flash"
     if not _MODEL_RE.match(local_model) or not _MODEL_RE.match(gemini_model):
         raise ValueError("Nama model tidak valid.")
     try:
-        local_timeout = int(data.get("local_timeout"))
-        gemini_timeout = int(data.get("gemini_timeout"))
+        local_timeout = int(data.get("local_timeout") or 20)
+        gemini_timeout = int(data.get("gemini_timeout") or 30)
     except (TypeError, ValueError):
         raise ValueError("Timeout harus berupa angka.")
     if not (1 <= local_timeout <= 300 and 1 <= gemini_timeout <= 300):
