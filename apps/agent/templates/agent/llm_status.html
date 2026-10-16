@@ -87,7 +87,6 @@
   <!-- Form Pengaturan Provider -->
   <form method="post" action="{% url 'agent:llm_settings' %}" id="llm-settings-form">
     {% csrf_token %}
-    <input type="hidden" name="mode" id="id_selected_mode" value="{{ mode|default:'gemini' }}">
 
     <div class="row g-4 mb-4">
       <!-- Card Provider 1: Google Gemini API -->
@@ -152,7 +151,7 @@
             </div>
 
             <div class="d-flex flex-wrap gap-2 pt-2 border-top">
-              <button type="submit" class="btn btn-primary btn-sm px-3 fw-bold btn-select-mode" data-mode="gemini">
+              <button type="submit" name="mode" value="gemini" class="btn btn-primary btn-sm px-3 fw-bold">
                 <i class="fas fa-check-circle me-1"></i>Simpan &amp; Aktifkan Gemini
               </button>
               <button type="button" class="btn btn-outline-success btn-sm px-3" id="test-gemini-direct-btn">
@@ -201,7 +200,7 @@
             </div>
 
             <div class="d-flex flex-wrap gap-2 pt-2 border-top">
-              <button type="submit" class="btn btn-outline-info text-dark btn-sm px-3 fw-bold btn-select-mode" data-mode="local">
+              <button type="submit" name="mode" value="local" class="btn btn-outline-info text-dark btn-sm px-3 fw-bold">
                 <i class="fas fa-check-circle me-1"></i>Simpan &amp; Aktifkan Ollama
               </button>
               <button type="button" class="btn btn-outline-secondary btn-sm px-3" id="test-local-direct-btn">
@@ -218,10 +217,10 @@
       <div class="card-body px-4 py-3 d-flex flex-wrap justify-content-between align-items-center gap-3">
         <div class="d-flex align-items-center gap-2">
           <span class="text-muted small fw-bold">Opsi Lainnya:</span>
-          <button type="submit" class="btn btn-outline-warning btn-sm btn-select-mode" data-mode="auto" title="Coba Ollama lokal terlebih dahulu, jika gagal otomatis gunakan Gemini">
+          <button type="submit" name="mode" value="auto" class="btn btn-outline-warning btn-sm" title="Coba Ollama lokal terlebih dahulu, jika gagal otomatis gunakan Gemini">
             <i class="fas fa-bolt me-1"></i>Mode Auto (Ollama lalu Gemini)
           </button>
-          <button type="submit" class="btn btn-outline-secondary btn-sm btn-select-mode" data-mode="off" title="Matikan pemrosesan AI dan hanya gunakan template laporan">
+          <button type="submit" name="mode" value="off" class="btn btn-outline-secondary btn-sm" title="Matikan pemrosesan AI dan hanya gunakan template laporan">
             <i class="fas fa-power-off me-1"></i>Nonaktifkan AI (Template Statis)
           </button>
         </div>
