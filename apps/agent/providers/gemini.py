@@ -15,7 +15,7 @@ BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models"
 class GeminiProvider(NarrationProvider):
     name = "gemini"
 
-    def __init__(self, api_key, model="gemini-2.5-flash", timeout=30, max_tokens=400):
+    def __init__(self, api_key, model="gemini-3.8-flash", timeout=30, max_tokens=400):
         self.api_key = api_key
         self.model = model
         self.timeout = timeout
@@ -25,9 +25,8 @@ class GeminiProvider(NarrationProvider):
         if not self.api_key:
             raise ProviderError("gemini API key is not configured (GEMINI_API_KEY)")
         generation_config = {"temperature": 0.2, "maxOutputTokens": self.max_tokens}
-        # Only set thinkingConfig for models that support it (Gemini 2.5+ or thinking models).
-        # Passing thinkingConfig to gemini-1.5-* causes HTTP 400.
-        if "2.5" in self.model or "thinking" in self.model:
+        # Only set thinkingConfig for models that explicitly require it.
+        if "thinking" in self.model:
             generation_config["thinkingConfig"] = {"thinkingBudget": 0}
         payload = json.dumps(
             {

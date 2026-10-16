@@ -219,12 +219,12 @@ class GeminiProviderTests(SimpleTestCase):
 
         body = {"candidates": [{"content": {"parts": [{"text": " Halo "}]}}]}
         with mock.patch("urllib.request.urlopen", return_value=self._response(body)) as urlopen:
-            text = GeminiProvider(api_key="SECRET", model="gemini-2.5-flash").generate("p")
+            text = GeminiProvider(api_key="SECRET", model="gemini-3.8-flash").generate("p")
         request = urlopen.call_args.args[0]
         self.assertEqual(text, "Halo")
         self.assertNotIn("SECRET", request.full_url)
         self.assertEqual(request.get_header("X-goog-api-key"), "SECRET")
-        self.assertIn("gemini-2.5-flash:generateContent", request.full_url)
+        self.assertIn("gemini-3.8-flash:generateContent", request.full_url)
 
     def test_missing_key_raises(self):
         from agent.providers.gemini import GeminiProvider
@@ -263,7 +263,7 @@ class ManualSelectionTests(SimpleTestCase):
     def _form(self, **kw):
         data = {
             "mode": "gemini", "local_url": "http://172.18.0.1:11434", "local_model": "llama3.2:1b",
-            "local_timeout": "20", "gemini_model": "gemini-2.5-flash", "gemini_timeout": "30",
+            "local_timeout": "20", "gemini_model": "gemini-3.8-flash", "gemini_timeout": "30",
         }
         data.update(kw)
         return data
@@ -288,7 +288,7 @@ class ManualSelectionTests(SimpleTestCase):
             save_override(clean_override(self._form(mode="gemini")))
             chain = get_chain()
             self.assertEqual([type(p) for p in chain], [GeminiProvider])
-            self.assertEqual(chain[0].model, "gemini-2.5-flash")
+            self.assertEqual(chain[0].model, "gemini-3.8-flash")
             self.assertEqual(chain[0].api_key, "SECRET")
             self.assertNotIn("SECRET", open(self.path).read())
             self.assertEqual(get_config()["mode"], "gemini")

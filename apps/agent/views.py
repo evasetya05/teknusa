@@ -115,7 +115,7 @@ def llm_test_view(request):
         # Allow testing an unsaved key typed into the form, or fall back to stored key
         input_key = str(request.POST.get("gemini_api_key") or "").strip().strip("'\"")
         api_key = input_key or gem.get("api_key")
-        model = str(request.POST.get("gemini_model") or "").strip() or gem.get("model") or "gemini-2.5-flash"
+        model = str(request.POST.get("gemini_model") or "").strip() or gem.get("model") or "gemini-3.8-flash"
         if not api_key:
             return JsonResponse({
                 "ok": False,

@@ -14,7 +14,7 @@ from post_media.models.konten import IdeKonten
 
 GEMINI_URL = (
     "https://generativelanguage.googleapis.com/v1/models/"
-    "gemini-2.5-flash:generateContent"
+    "gemini-3.8-flash:generateContent"
 )
 IMAGE_URL = "https://loremflickr.com/1080/1080/plantation"
 FONT_PATHS = [

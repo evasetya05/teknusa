@@ -76,12 +76,12 @@
               <label class="form-label small" for="id_gemini_model">Model</label>
               <input class="form-control form-control-sm mb-2" id="id_gemini_model" name="gemini_model" list="gemini-models" value="{{ gemini.model }}" required>
               <datalist id="gemini-models">
+                <option value="gemini-3.8-flash">
+                <option value="gemini-3.8-pro">
+                <option value="gemini-3.8-flash-lite">
                 <option value="gemini-2.5-flash">
                 <option value="gemini-2.0-flash">
                 <option value="gemini-1.5-flash">
-                <option value="gemini-1.5-pro">
-                <option value="gemini-2.5-flash-lite">
-                <option value="gemini-2.5-pro">
               </datalist>
               <label class="form-label small" for="id_gemini_timeout">Timeout (detik)</label>
               <input type="number" min="1" max="300" class="form-control form-control-sm" id="id_gemini_timeout" name="gemini_timeout" value="{{ gemini.timeout }}" required>
