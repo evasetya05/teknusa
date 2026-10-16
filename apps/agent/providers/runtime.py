@@ -79,10 +79,10 @@ def clean_override(data):
         "local": {"url": url.rstrip("/"), "model": local_model, "timeout": local_timeout},
         "gemini": {"model": gemini_model, "timeout": gemini_timeout},
     }
-    new_key = str(data.get("gemini_api_key", "")).strip()
+    new_key = str(data.get("gemini_api_key", "")).strip().strip("'\"")
     if new_key:
         if not _KEY_RE.match(new_key):
-            raise ValueError("Format API key Gemini tidak valid.")
+            raise ValueError("Format API key Gemini tidak valid. Pastikan tidak ada spasi atau tanda kutip.")
         cleaned["_new_api_key"] = new_key
     elif str(data.get("clear_gemini_key", "")).lower() in ("1", "on", "true"):
         cleaned["_clear_api_key"] = True

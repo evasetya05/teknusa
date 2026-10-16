@@ -19,7 +19,7 @@
 <div class="card brief-card status-{{ b.status }} mb-3" id="finance-brief-{{ b.entity.id }}">
   <div class="card-body">
     <h3 class="h6 mb-2"><span class="brief-dot"></span>{{ b.entity.name }}</h3>
-    <p class="mb-2">{{ b.narration }}{% if b.narration_source != "template" %} <span class="badge bg-light text-muted border" title="Written by {{ b.narration_source }}">AI</span>{% endif %}</p>
+    <p class="mb-2">{{ b.narration }}{% if b.narration_source != "template" %} <span class="badge bg-success text-white" title="Dinarasikan oleh {{ b.narration_source }}"><i class="fas fa-robot me-1"></i>AI ({{ b.narration_source }})</span>{% endif %}</p>
     {% if b.alerts %}
     <ul class="brief-alerts small mb-0 ps-3">
       {% for a in b.alerts %}<li class="sev-{{ a.severity }}">{{ a.message }}</li>{% endfor %}
@@ -36,7 +36,7 @@
 <div class="card brief-card status-{{ b.status }} mb-3" id="kanban-brief-{{ b.metrics.board_id }}">
   <div class="card-body">
     <h3 class="h6 mb-2"><span class="brief-dot"></span>{{ b.metrics.board }}</h3>
-    <p class="mb-2">{{ b.narration }}{% if b.narration_source != "template" %} <span class="badge bg-light text-muted border" title="Written by {{ b.narration_source }}">AI</span>{% endif %}</p>
+    <p class="mb-2">{{ b.narration }}{% if b.narration_source != "template" %} <span class="badge bg-success text-white" title="Dinarasikan oleh {{ b.narration_source }}"><i class="fas fa-robot me-1"></i>AI ({{ b.narration_source }})</span>{% endif %}</p>
     {% if b.alerts %}
     <ul class="brief-alerts small mb-2 ps-3">
       {% for a in b.alerts %}<li class="sev-{{ a.severity }}">{{ a.message }}</li>{% endfor %}

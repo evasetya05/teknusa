@@ -12,7 +12,7 @@ from django.views.decorators.http import require_POST
 
 from agent import chat
 from agent.briefing import build_briefings, is_briefing_admin
-from agent.providers import ProviderError, get_chain, get_config
+from agent.providers import GeminiProvider, OllamaProvider, ProviderError, get_chain, get_config
 from agent.providers.runtime import (
     MODES, clean_override, clear_override, get_stored_api_key, key_hint, load_override, save_override,
 )
@@ -65,10 +65,18 @@ def llm_settings_view(request):
     except OSError as exc:
         messages.error(request, f"Gagal menyimpan pengaturan: {exc.__class__.__name__}")
     else:
-        if cleaned["mode"] in ("gemini", "auto") and not get_config()["gemini"].get("api_key"):
-            messages.warning(request, "Tersimpan, tetapi GEMINI_API_KEY belum diset di environment server.")
+        cfg = get_config()
+        mode = cleaned["mode"]
+        if mode in ("gemini", "auto") and not cfg["gemini"].get("api_key"):
+            messages.warning(request, f"Pengaturan disimpan (mode {mode.upper()}), tetapi API Key Gemini belum terpasang.")
         else:
-            messages.success(request, "Pengaturan agent AI disimpan.")
+            mode_display = {
+                "off": "Off (Template)",
+                "local": "Lokal (Ollama)",
+                "gemini": "API (Gemini)",
+                "auto": "Auto (Ollama lalu Gemini)",
+            }.get(mode, mode)
+            messages.success(request, f"Pengaturan agent AI berhasil disimpan. Mode aktif: {mode_display}.")
     return redirect("agent:llm_status")
 
 
@@ -96,15 +104,37 @@ def chat_view(request):
 @login_required
 @require_POST
 def llm_test_view(request):
-    """Run a real generate() call against each configured provider."""
+    """Run a real generate() call against each configured provider, or a targeted provider."""
     if not is_briefing_admin(request.user):
         raise PermissionDenied
-    chain = get_chain()
-    if not chain:
-        return JsonResponse({
-            "ok": False,
-            "error": "LLM mode is 'off'. Pilih mode lain di halaman ini (local, gemini, atau auto).",
-        })
+    target = (request.POST.get("provider") or "").strip().lower()
+    config = get_config()
+
+    if target == "gemini":
+        gem = config["gemini"]
+        # Allow testing an unsaved key typed into the form, or fall back to stored key
+        input_key = str(request.POST.get("gemini_api_key") or "").strip().strip("'\"")
+        api_key = input_key or gem.get("api_key")
+        model = str(request.POST.get("gemini_model") or "").strip() or gem.get("model") or "gemini-2.5-flash"
+        if not api_key:
+            return JsonResponse({
+                "ok": False,
+                "error": "API Key Gemini belum diisi. Masukkan API key pada kolom Gemini lalu klik Simpan atau Test.",
+            })
+        chain = [GeminiProvider(api_key=api_key, model=model, timeout=gem.get("timeout", 30))]
+    elif target == "local":
+        loc = config["local"]
+        url = str(request.POST.get("local_url") or "").strip() or loc.get("url")
+        model = str(request.POST.get("local_model") or "").strip() or loc.get("model")
+        chain = [OllamaProvider(url=url, model=model, timeout=loc.get("timeout", 20))]
+    else:
+        chain = get_chain()
+        if not chain:
+            return JsonResponse({
+                "ok": False,
+                "error": "LLM mode saat ini 'off'. Pilih mode lain di form (Lokal, Gemini, atau Auto) lalu Simpan.",
+            })
+
     results = []
     for provider in chain:
         started = time.monotonic()

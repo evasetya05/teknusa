@@ -45,8 +45,11 @@
 </section>
 
 <script>
-(function () {
-  var URL = "{% url 'agent:chat' %}", CSRF = "{{ csrf_token }}", KEY = "agent-chat-history";
+  function getCookie(name) {
+    var match = document.cookie.match(new RegExp('(^|;\\s*)' + name + '=([^;]*)'));
+    return match ? decodeURIComponent(match[2]) : "";
+  }
+  var URL = "{% url 'agent:chat' %}", CSRF = "{{ csrf_token }}" || getCookie("csrftoken"), KEY = "agent-chat-history";
   var fab = document.getElementById("agent-chat-fab"), panel = document.getElementById("agent-chat-panel");
   var log = document.getElementById("agent-chat-log"), form = document.getElementById("agent-chat-form");
   var input = document.getElementById("agent-chat-input"), send = document.getElementById("agent-chat-send");

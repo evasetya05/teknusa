@@ -25,8 +25,9 @@ class GeminiProvider(NarrationProvider):
         if not self.api_key:
             raise ProviderError("gemini API key is not configured (GEMINI_API_KEY)")
         generation_config = {"temperature": 0.2, "maxOutputTokens": self.max_tokens}
-        if "flash" in self.model:
-            # Avoid hidden "thinking" tokens consuming the small output budget.
+        # Only set thinkingConfig for models that support it (Gemini 2.5+ or thinking models).
+        # Passing thinkingConfig to gemini-1.5-* causes HTTP 400.
+        if "2.5" in self.model or "thinking" in self.model:
             generation_config["thinkingConfig"] = {"thinkingBudget": 0}
         payload = json.dumps(
             {
@@ -44,7 +45,17 @@ class GeminiProvider(NarrationProvider):
             with urllib.request.urlopen(request, timeout=self.timeout) as response:
                 body = json.loads(response.read().decode("utf-8"))
         except urllib.error.HTTPError as exc:
-            raise ProviderError(f"gemini HTTP error {exc.code}") from exc
+            err_msg = ""
+            try:
+                if hasattr(exc, "read"):
+                    raw = exc.read()
+                    if raw:
+                        err_body = json.loads(raw.decode("utf-8"))
+                        err_msg = err_body.get("error", {}).get("message", "")
+            except Exception:
+                pass
+            detail = f": {err_msg}" if err_msg else ""
+            raise ProviderError(f"gemini HTTP error {exc.code}{detail}") from exc
         except (urllib.error.URLError, TimeoutError, OSError, ValueError) as exc:
             raise ProviderError(f"gemini request failed: {exc}") from exc
 
