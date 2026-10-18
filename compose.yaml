@@ -11,7 +11,7 @@ services:
       MARIADB_USER: teknusas_teknusa
       MARIADB_PASSWORD: ${MYSQL_PASSWORD:-@Pontianak123}
     ports:
-      - "3307:3306"
+      - "3310:3306"
     volumes:
       - mariadb_data:/var/lib/mysql
       - ./mysql.cnf:/etc/mysql/conf.d/mysql.cnf:ro
