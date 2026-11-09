@@ -101,12 +101,16 @@ def rate_limited(user_id):
         return False
 
 
-def answer_question(question, history=None, facts=None, providers=None):
+def answer_question(question, history=None, facts=None, providers=None, session_entity_id="all"):
     """Return ``{"answer", "source"}``. ``source`` is a provider name or ``"fallback"``."""
     question = (question or "").strip()[:MAX_QUESTION_CHARS]
     history = clean_history(history)
     chain = get_chain() if providers is None else providers
-    facts = build_chat_facts() if facts is None else facts
+    try:
+        facts = build_chat_facts(session_entity_id=session_entity_id) if facts is None else facts
+    except Exception as exc:
+        logger.exception("Error building chat facts: %s", exc)
+        facts = "Data laporan belum tersedia saat ini."
 
     if not chain:
         return {

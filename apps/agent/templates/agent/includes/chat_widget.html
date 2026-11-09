@@ -39,20 +39,25 @@
     <button type="button" class="btn btn-outline-primary btn-sm">Tugas kanban apa yang terlambat?</button>
   </div>
   <form id="agent-chat-form" autocomplete="off">
+    {% csrf_token %}
     <input id="agent-chat-input" class="form-control form-control-sm" maxlength="500" placeholder="Tanya tentang laporan..." required>
     <button id="agent-chat-send" class="btn btn-primary btn-sm" type="submit"><i class="fas fa-paper-plane"></i></button>
   </form>
 </section>
 
 <script>
+(function () {
   function getCookie(name) {
     var match = document.cookie.match(new RegExp('(^|;\\s*)' + name + '=([^;]*)'));
     return match ? decodeURIComponent(match[2]) : "";
   }
-  var URL = "{% url 'agent:chat' %}", CSRF = "{{ csrf_token }}" || getCookie("csrftoken"), KEY = "agent-chat-history";
+  var URL = "{% url 'agent:chat' %}";
+  var KEY = "agent-chat-history";
   var fab = document.getElementById("agent-chat-fab"), panel = document.getElementById("agent-chat-panel");
   var log = document.getElementById("agent-chat-log"), form = document.getElementById("agent-chat-form");
   var input = document.getElementById("agent-chat-input"), send = document.getElementById("agent-chat-send");
+  var csrfInput = form ? form.querySelector('[name=csrfmiddlewaretoken]') : null;
+  var CSRF = (csrfInput ? csrfInput.value : "") || "{{ csrf_token }}" || getCookie("csrftoken");
   var history = [];
   try { history = JSON.parse(sessionStorage.getItem(KEY) || "[]"); } catch (e) { history = []; }
 
@@ -76,16 +81,24 @@
     history.push({role: "user", text: text}); add("user", text);
     var wait = add("assistant", "Sedang berpikir…");
     send.disabled = true; input.disabled = true;
-    fetch(URL, {method: "POST", credentials: "same-origin",
-      headers: {"Content-Type": "application/json", "X-CSRFToken": CSRF},
-      body: JSON.stringify({message: text, history: prior})})
-      .then(function (r) { return r.json().then(function (d) { return {status: r.status, data: d}; }); })
+    var currentCsrf = (form && form.querySelector('[name=csrfmiddlewaretoken]') ? form.querySelector('[name=csrfmiddlewaretoken]').value : "") || CSRF || getCookie("csrftoken");
+    fetch(URL, {
+      method: "POST",
+      credentials: "same-origin",
+      headers: {"Content-Type": "application/json", "X-CSRFToken": currentCsrf},
+      body: JSON.stringify({message: text, history: prior})
+    })
+      .then(function (r) {
+        return r.json().catch(function () {
+          return {ok: false, error: "Respon server tidak valid (HTTP " + r.status + ")."};
+        });
+      })
       .then(function (res) {
         wait.remove();
-        if (!res.data.ok) { add("assistant", res.data.error || "Terjadi kesalahan."); return; }
-        var meta = res.data.source === "fallback" ? "ringkasan laporan (bukan jawaban AI)" : "dijawab oleh " + res.data.source;
-        history.push({role: "assistant", text: res.data.answer, meta: meta});
-        add("assistant", res.data.answer, meta); save();
+        if (!res.ok) { add("assistant", res.error || "Terjadi kesalahan."); return; }
+        var meta = res.source === "fallback" ? "ringkasan laporan (bukan jawaban AI)" : "dijawab oleh " + res.source;
+        history.push({role: "assistant", text: res.answer, meta: meta});
+        add("assistant", res.answer, meta); save();
       })
       .catch(function () { wait.remove(); add("assistant", "Gagal menghubungi server."); })
       .finally(function () { send.disabled = false; input.disabled = false; input.focus(); });

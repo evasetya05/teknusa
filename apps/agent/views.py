@@ -85,10 +85,13 @@ def llm_settings_view(request):
 def chat_view(request):
     """Dashboard chat about the reports (admins only). Body: {message, history[]}."""
     if not is_briefing_admin(request.user):
-        raise PermissionDenied
+        return JsonResponse(
+            {"ok": False, "error": "Akses ditolak: chat laporan hanya dapat diakses oleh admin."},
+            status=403,
+        )
     try:
         payload = json.loads(request.body.decode("utf-8") or "{}")
-    except ValueError:
+    except (ValueError, UnicodeDecodeError):
         return JsonResponse({"ok": False, "error": "Permintaan tidak valid."}, status=400)
     message = payload.get("message") if isinstance(payload, dict) else None
     if not isinstance(message, str) or not message.strip():
@@ -97,7 +100,8 @@ def chat_view(request):
         return JsonResponse({"ok": False, "error": "Pertanyaan terlalu panjang."}, status=400)
     if chat.rate_limited(request.user.pk):
         return JsonResponse({"ok": False, "error": "Terlalu banyak permintaan, coba sesaat lagi."}, status=429)
-    result = chat.answer_question(message, payload.get("history"))
+    session_entity_id = request.session.get("selected_entity_id", "all")
+    result = chat.answer_question(message, payload.get("history"), session_entity_id=session_entity_id)
     return JsonResponse({"ok": True, **result})
 
 
