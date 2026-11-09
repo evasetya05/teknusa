@@ -396,7 +396,7 @@ class ChatTests(SimpleTestCase):
     def test_off_mode_returns_fallback_without_calling_llm(self):
         result = self._ask(None)
         self.assertEqual(result["source"], "fallback")
-        self.assertIn("nonaktif", result["answer"])
+        self.assertIn("disabled", result["answer"])
 
     def test_prompt_contains_facts_question_and_history(self):
         provider = FakeProvider(output="Laba Rp 6,000,000.")
@@ -405,8 +405,8 @@ class ChatTests(SimpleTestCase):
         history = [{"role": "user", "text": "halo"}, {"role": "assistant", "text": "hai"}, {"role": "x", "text": "bad"}]
         self._ask(provider, question="Berapa laba?", history=history)
         self.assertIn(self.FACTS, seen[0])
-        self.assertIn("PERTANYAAN: Berapa laba?", seen[0])
-        self.assertIn("Pengguna: halo", seen[0])
+        self.assertIn("QUESTION: Berapa laba?", seen[0])
+        self.assertIn("User: halo", seen[0])
         self.assertNotIn("bad", seen[0])
 
     def test_history_is_cleaned_and_capped(self):

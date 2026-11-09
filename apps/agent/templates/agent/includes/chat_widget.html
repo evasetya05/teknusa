@@ -22,25 +22,25 @@
   #agent-chat-suggest button { margin: 0 4px 6px 0; }
 </style>
 
-<button id="agent-chat-fab" type="button" aria-label="Buka chat laporan" title="Tanya laporan"><i class="fas fa-comments"></i></button>
+<button id="agent-chat-fab" type="button" aria-label="Open report chat" title="Ask reports"><i class="fas fa-comments"></i></button>
 
-<section id="agent-chat-panel" aria-label="Chat laporan">
+<section id="agent-chat-panel" aria-label="Report chat">
   <div id="agent-chat-head">
-    <strong><i class="fas fa-robot me-2"></i>Tanya Laporan</strong>
+    <strong><i class="fas fa-robot me-2"></i>Report Assistant</strong>
     <span>
-      <button id="agent-chat-clear" type="button" class="btn btn-sm btn-link text-white" title="Hapus percakapan">Bersihkan</button>
-      <button id="agent-chat-close" type="button" class="btn btn-sm btn-link text-white" aria-label="Tutup">&times;</button>
+      <button id="agent-chat-clear" type="button" class="btn btn-sm btn-link text-white" title="Clear conversation">Clear</button>
+      <button id="agent-chat-close" type="button" class="btn btn-sm btn-link text-white" aria-label="Close">&times;</button>
     </span>
   </div>
   <div id="agent-chat-log" aria-live="polite"></div>
   <div id="agent-chat-suggest">
-    <button type="button" class="btn btn-outline-primary btn-sm">Bagaimana laba bulan ini?</button>
-    <button type="button" class="btn btn-outline-primary btn-sm">Apa alert yang perlu perhatian?</button>
-    <button type="button" class="btn btn-outline-primary btn-sm">Tugas kanban apa yang terlambat?</button>
+    <button type="button" class="btn btn-outline-primary btn-sm">How is net profit this month?</button>
+    <button type="button" class="btn btn-outline-primary btn-sm">What alerts need attention?</button>
+    <button type="button" class="btn btn-outline-primary btn-sm">Which tasks or leads are overdue?</button>
   </div>
   <form id="agent-chat-form" autocomplete="off">
     {% csrf_token %}
-    <input id="agent-chat-input" class="form-control form-control-sm" maxlength="500" placeholder="Tanya tentang laporan..." required>
+    <input id="agent-chat-input" class="form-control form-control-sm" maxlength="500" placeholder="Ask about finance, kanban, or leads..." required>
     <button id="agent-chat-send" class="btn btn-primary btn-sm" type="submit"><i class="fas fa-paper-plane"></i></button>
   </form>
 </section>
@@ -72,14 +72,14 @@
   }
   function render() {
     log.innerHTML = "";
-    if (!history.length) add("assistant", "Halo! Tanyakan tentang laporan keuangan atau kanban di dashboard ini.");
+    if (!history.length) add("assistant", "Hello! Ask me anything about finance, kanban, or leads in this dashboard.");
     history.forEach(function (t) { add(t.role, t.text, t.meta); });
   }
   function ask(text) {
     text = text.trim(); if (!text) return;
     var prior = history.map(function (t) { return {role: t.role, text: t.text}; });
     history.push({role: "user", text: text}); add("user", text);
-    var wait = add("assistant", "Sedang berpikir…");
+    var wait = add("assistant", "Thinking…");
     send.disabled = true; input.disabled = true;
     var currentCsrf = (form && form.querySelector('[name=csrfmiddlewaretoken]') ? form.querySelector('[name=csrfmiddlewaretoken]').value : "") || CSRF || getCookie("csrftoken");
     fetch(URL, {
@@ -90,17 +90,17 @@
     })
       .then(function (r) {
         return r.json().catch(function () {
-          return {ok: false, error: "Respon server tidak valid (HTTP " + r.status + ")."};
+          return {ok: false, error: "Invalid server response (HTTP " + r.status + ")."};
         });
       })
       .then(function (res) {
         wait.remove();
-        if (!res.ok) { add("assistant", res.error || "Terjadi kesalahan."); return; }
-        var meta = res.source === "fallback" ? "ringkasan laporan (bukan jawaban AI)" : "dijawab oleh " + res.source;
+        if (!res.ok) { add("assistant", res.error || "An error occurred."); return; }
+        var meta = res.source === "fallback" ? "report summary (deterministic fallback)" : "answered by " + res.source;
         history.push({role: "assistant", text: res.answer, meta: meta});
         add("assistant", res.answer, meta); save();
       })
-      .catch(function () { wait.remove(); add("assistant", "Gagal menghubungi server."); })
+      .catch(function () { wait.remove(); add("assistant", "Failed to connect to server."); })
       .finally(function () { send.disabled = false; input.disabled = false; input.focus(); });
   }
 

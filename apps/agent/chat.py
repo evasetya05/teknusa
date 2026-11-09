@@ -32,12 +32,12 @@ RATE_WINDOW_SECONDS = 60
 SOURCE_FALLBACK = "fallback"
 
 PROMPT = (
-    "Anda asisten laporan bisnis TekNusa. Jawab pertanyaan pengguna dalam bahasa "
-    "Indonesia, singkat (maksimal 4 kalimat), HANYA berdasarkan FAKTA di bawah. "
-    "Jangan mengarang, membulatkan, menghitung ulang, atau menambah angka. "
-    "Jika jawabannya tidak ada di fakta, katakan bahwa data tidak tersedia. "
-    "Keluarkan teks biasa saja.\n\nFAKTA:\n{facts}\n\n"
-    "{history}PERTANYAAN: {question}\nJAWABAN:"
+    "You are the TekNusa business report assistant. Answer user questions in English, "
+    "concise (maximum 4 sentences), strictly based ONLY on the FACTS below. "
+    "Do not invent, round, recalculate, or add any numbers. "
+    "If the answer is not present in the facts, state that the data is not available. "
+    "Output plain text only.\n\nFACTS:\n{facts}\n\n"
+    "{history}QUESTION: {question}\nANSWER:"
 )
 
 
@@ -51,8 +51,8 @@ def build_chat_facts(session_entity_id="all", today=None):
         blocks.append(build_facts(narrate_finance(entity.name, metrics, alerts), alerts))
         for change in metrics["expense_changes"][:3]:
             blocks.append(
-                f"- Beban {change['account']}: bulan ini Rp {change['current']:,.0f}, "
-                f"bulan lalu Rp {change['previous']:,.0f}."
+                f"- Expense {change['account']}: this month Rp {change['current']:,.0f}, "
+                f"last month Rp {change['previous']:,.0f}."
             )
     for board in Board.objects.filter(entity__in=entities).order_by("name"):
         metrics = collect_board(board, today=today)
@@ -65,8 +65,8 @@ def build_chat_facts(session_entity_id="all", today=None):
         for lead in leads_metrics["top_leads"][:2]:
             company_str = f" ({lead['company']})" if lead.get("company") else ""
             blocks.append(
-                f"- Lead prioritas {entity.name}: {lead['name']}{company_str}, "
-                f"status {lead['status']}, nilai Rp {lead['estimated_value']:,.0f}."
+                f"- Priority lead ({entity.name}): {lead['name']}{company_str}, "
+                f"status {lead['status']}, value Rp {lead['estimated_value']:,.0f}."
             )
     return "\n".join(blocks)[:MAX_FACTS_CHARS]
 
@@ -87,9 +87,9 @@ def _format_history(history):
     if not history:
         return ""
     lines = [
-        ("Pengguna: " if t["role"] == "user" else "Asisten: ") + t["text"] for t in history
+        ("User: " if t["role"] == "user" else "Assistant: ") + t["text"] for t in history
     ]
-    return "RIWAYAT:\n" + "\n".join(lines) + "\n\n"
+    return "HISTORY:\n" + "\n".join(lines) + "\n\n"
 
 
 def is_valid_answer(answer, facts, question, history=()):
@@ -121,12 +121,12 @@ def answer_question(question, history=None, facts=None, providers=None, session_
         facts = build_chat_facts(session_entity_id=session_entity_id) if facts is None else facts
     except Exception as exc:
         logger.exception("Error building chat facts: %s", exc)
-        facts = "Data laporan belum tersedia saat ini."
+        facts = "Report data is currently unavailable."
 
     if not chain:
         return {
-            "answer": "Agent AI sedang nonaktif (mode off). Aktifkan di halaman Agent AI & LLM. "
-                      "Ringkasan laporan saat ini:\n" + facts,
+            "answer": "AI Agent is currently disabled (off mode). Enable it on the Agent AI & LLM page. "
+                      "Current report summary:\n" + facts,
             "source": SOURCE_FALLBACK,
         }
 
@@ -142,7 +142,7 @@ def answer_question(question, history=None, facts=None, providers=None, session_
         logger.warning("Chat provider %s output rejected by validation", provider.name)
 
     return {
-        "answer": "Maaf, saya belum bisa menjawab dengan aman (AI tidak tersedia atau jawabannya "
-                  "memuat angka yang tidak ada di laporan). Ringkasan laporan saat ini:\n" + facts,
+        "answer": "Sorry, I cannot answer safely right now (AI provider is unavailable or returned "
+                  "unverified figures). Current report summary:\n" + facts,
         "source": SOURCE_FALLBACK,
     }
