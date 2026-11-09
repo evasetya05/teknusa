@@ -26,6 +26,8 @@ def llm_test_view(request):
         input_key = str(request.POST.get("gemini_api_key") or "").strip().strip("'\"")
         api_key = input_key or gem.get("api_key")
         model = str(request.POST.get("gemini_model") or "").strip() or gem.get("model") or "gemini-1.5-flash"
+        if "3.8" in model:
+            model = "gemini-1.5-flash"
         raw_timeout = request.POST.get("gemini_timeout")
         try:
             timeout = int(raw_timeout) if raw_timeout else gem.get("timeout", 30)

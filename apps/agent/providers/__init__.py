@@ -37,6 +37,9 @@ def get_config():
             if key not in ("api_key", "api_key_enc"):
                 merged[key] = value
         config[section] = merged
+    # Auto-sanitize any legacy model references in memory
+    if "3.8" in config["gemini"].get("model", ""):
+        config["gemini"]["model"] = "gemini-1.5-flash"
     stored_key = get_stored_api_key()
     if stored_key:
         config["gemini"]["api_key"] = stored_key

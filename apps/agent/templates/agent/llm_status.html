@@ -133,7 +133,7 @@
             <div class="row g-2 mb-3">
               <div class="col-sm-8">
                 <label class="form-label small fw-bold" for="id_gemini_model">Model Gemini</label>
-                <input class="form-control form-control-sm" id="id_gemini_model" name="gemini_model" list="gemini-models" value="{{ gemini.model|default:'gemini-1.5-flash' }}" required>
+                <input class="form-control form-control-sm" id="id_gemini_model" name="gemini_model" list="gemini-models" value="{% if '3.8' in gemini.model %}gemini-1.5-flash{% else %}{{ gemini.model|default:'gemini-1.5-flash' }}{% endif %}" required>
                 <datalist id="gemini-models">
                   <option value="gemini-1.5-flash">
                   <option value="gemini-2.0-flash">
@@ -343,6 +343,12 @@
       });
   }
 
+  // Auto-correct any legacy model filled in browser input
+  var modelInputInit = document.getElementById("id_gemini_model");
+  if (modelInputInit && (!modelInputInit.value || modelInputInit.value.indexOf("3.8") !== -1)) {
+    modelInputInit.value = "gemini-1.5-flash";
+  }
+
   // 1. Quick test active provider
   var quickActiveBtn = document.getElementById("quick-test-active-btn");
   if (quickActiveBtn) {
@@ -361,6 +367,10 @@
       if (key) params.append("gemini_api_key", key);
       var modelEl = document.getElementById("id_gemini_model");
       var modelVal = modelEl ? modelEl.value.trim() : "gemini-1.5-flash";
+      if (!modelVal || modelVal.indexOf("3.8") !== -1) {
+        modelVal = "gemini-1.5-flash";
+        if (modelEl) modelEl.value = modelVal;
+      }
       params.append("gemini_model", modelVal);
 
       runTest(params, "Sedang menghubungi Google Gemini API (" + modelVal + ")...");

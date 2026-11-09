@@ -52,7 +52,11 @@ def load_override():
             data = json.load(fh)
     except (OSError, ValueError):
         return {}
-    return data if isinstance(data, dict) else {}
+    if isinstance(data, dict):
+        if "3.8" in (data.get("gemini") or {}).get("model", ""):
+            data["gemini"]["model"] = "gemini-1.5-flash"
+        return data
+    return {}
 
 
 def clean_override(data):
@@ -66,6 +70,8 @@ def clean_override(data):
             raise ValueError("URL Ollama harus berformat http(s)://host:port.")
     local_model = str(data.get("local_model", "")).strip() or "llama3.2:1b"
     gemini_model = str(data.get("gemini_model", "")).strip() or "gemini-1.5-flash"
+    if "3.8" in gemini_model:
+        gemini_model = "gemini-1.5-flash"
     if not _MODEL_RE.match(local_model) or not _MODEL_RE.match(gemini_model):
         raise ValueError("Nama model tidak valid.")
     try:

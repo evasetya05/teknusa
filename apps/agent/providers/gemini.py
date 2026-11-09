@@ -17,6 +17,9 @@ class GeminiProvider(NarrationProvider):
 
     def __init__(self, api_key, model="gemini-1.5-flash", timeout=30, max_tokens=400):
         self.api_key = api_key
+        # Auto-correct any legacy/invalid 3.8-flash model references
+        if not model or "3.8" in model:
+            model = "gemini-1.5-flash"
         self.model = model
         self.timeout = timeout
         self.max_tokens = max_tokens
