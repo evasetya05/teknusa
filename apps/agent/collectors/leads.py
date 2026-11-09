@@ -72,8 +72,20 @@ def collect_leads(entity, today=None, now=None):
         ),
     )
 
-    top_count = thresholds.get("lead_top_priority_count", 3)
+    top_count = thresholds.get("lead_top_priority_count", 5)
     top_leads = [_lead_row(l, today) for l in ranked[:top_count]]
+
+    overdue_sorted = sorted(
+        overdue,
+        key=lambda l: (
+            PRIORITY_RANK.get(l.priority, 9),
+            l.next_follow_up or today,
+            -float(l.estimated_value or 0),
+        ),
+    )
+    overdue_leads = [_lead_row(l, today) for l in overdue_sorted]
+    stalled_sample = [_lead_row(l, today) for l in stalled_leads.order_by("-created_at")[:10]]
+    unassigned_sample = [_lead_row(l, today) for l in open_leads.filter(assigned_to__isnull=True).order_by("-created_at")[:10]]
 
     return {
         "entity_id": getattr(entity, "pk", None),
@@ -91,5 +103,8 @@ def collect_leads(entity, today=None, now=None):
         "new_month": new_month,
         "won_month": won_month,
         "top_leads": top_leads,
+        "overdue_leads": overdue_leads,
+        "stalled_leads": stalled_sample,
+        "unassigned_leads": unassigned_sample,
     }
 

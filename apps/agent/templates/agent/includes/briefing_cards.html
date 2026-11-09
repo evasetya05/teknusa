@@ -239,24 +239,168 @@
 {% for b in leads %}
 <div class="card brief-card status-{{ b.status }} mb-3" id="leads-brief-{{ b.entity.id }}">
   <div class="card-body">
-    <h3 class="h6 mb-2"><span class="brief-dot"></span>{{ b.entity.name }}</h3>
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+      <h3 class="h6 mb-0">
+        <span class="brief-dot"></span>
+        <span class="fw-bold">{{ b.entity.name }}</span>
+      </h3>
+      <div class="d-flex align-items-center gap-2">
+        {% if b.metrics.open_total == 0 %}
+          <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">No Open Leads</span>
+        {% elif b.status == "green" %}
+          <span class="badge bg-success-subtle text-success border border-success-subtle">On Track</span>
+        {% elif b.status == "yellow" %}
+          <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle">Attention</span>
+        {% else %}
+          <span class="badge bg-danger-subtle text-danger border border-danger-subtle">Action Needed</span>
+        {% endif %}
+        <a href="{% url 'leads:lead_list' %}" target="_blank" class="btn btn-xs btn-outline-primary py-0 px-2">
+          View All Leads &rarr;
+        </a>
+      </div>
+    </div>
+
     <p class="mb-2">{{ b.narration }}{% if b.narration_source != "template" %} <span class="badge bg-success text-white" title="Dinarasikan oleh {{ b.narration_source }}"><i class="fas fa-robot me-1"></i>AI ({{ b.narration_source }})</span>{% endif %}</p>
+
+    <!-- Metrics Summary Bar -->
+    <div class="d-flex flex-wrap gap-2 mb-3">
+      <span class="badge bg-light text-dark border">
+        <i class="fas fa-folder-open text-primary me-1"></i>Open: <strong>{{ b.metrics.open_total }}</strong>
+      </span>
+      <span class="badge bg-light text-dark border">
+        <i class="fas fa-coins text-warning me-1"></i>Pipeline: <strong>Rp {{ b.metrics.pipeline_value|floatformat:0 }}</strong>
+      </span>
+      {% if b.metrics.overdue > 0 %}
+        <span class="badge bg-danger">
+          <i class="fas fa-clock me-1"></i>Overdue: <strong>{{ b.metrics.overdue }}</strong>
+        </span>
+      {% endif %}
+      {% if b.metrics.stalled > 0 %}
+        <span class="badge bg-warning text-dark border border-warning">
+          <i class="fas fa-hourglass-half me-1"></i>Stalled (7d+): <strong>{{ b.metrics.stalled }}</strong>
+        </span>
+      {% endif %}
+      {% if b.metrics.unassigned > 0 %}
+        <span class="badge bg-secondary">
+          <i class="fas fa-user-slash me-1"></i>Unassigned: <strong>{{ b.metrics.unassigned }}</strong>
+        </span>
+      {% endif %}
+    </div>
+
     {% if b.alerts %}
-    <ul class="brief-alerts small mb-2 ps-3">
+    <ul class="brief-alerts small mb-3 ps-3">
       {% for a in b.alerts %}<li class="sev-{{ a.severity }}">{{ a.message }}</li>{% endfor %}
     </ul>
     {% endif %}
+
+    <!-- Overdue Follow-up Leads Banner with direct click links -->
+    {% if b.metrics.overdue > 0 and b.metrics.overdue_leads %}
+    <div class="mb-3 p-2 border border-danger-subtle rounded bg-danger-subtle bg-opacity-10">
+      <div class="text-danger fw-bold small mb-2 d-flex justify-content-between align-items-center">
+        <span><i class="fas fa-exclamation-triangle me-1"></i>Overdue Follow-up Leads ({{ b.metrics.overdue }} total):</span>
+        <a href="{% url 'leads:lead_list' %}" target="_blank" class="btn btn-xs btn-outline-danger py-0 px-2 small">
+          Open CRM &rarr;
+        </a>
+      </div>
+      <ul class="list-unstyled mb-0 small ps-1">
+        {% for l in b.metrics.overdue_leads %}
+        <li class="py-1 border-bottom border-light-subtle d-flex justify-content-between align-items-center flex-wrap gap-1">
+          <div>
+            <a href="{% url 'leads:lead_detail' l.id %}" target="_blank" class="fw-semibold text-danger text-decoration-none">
+              <i class="fas fa-user me-1"></i>{{ l.name }}
+            </a>
+            {% if l.company %}<span class="text-secondary ms-1">({{ l.company }})</span>{% endif %}
+            <span class="text-muted ms-1">[{{ l.status }}{% if l.assigned_to %}, assigned: {{ l.assigned_to }}{% else %}, <span class="text-danger">unassigned</span>{% endif %}]</span>
+          </div>
+          <div class="d-flex align-items-center gap-1">
+            <span class="badge {% if l.priority == 'hot' %}bg-danger{% elif l.priority == 'warm' %}bg-warning text-dark{% else %}bg-secondary{% endif %}">
+              {{ l.priority|title }}
+            </span>
+            <span class="badge bg-danger">
+              {{ l.days_overdue }}d overdue (due {{ l.next_follow_up|date:"d M Y" }})
+            </span>
+            <a href="{% url 'leads:lead_detail' l.id %}" target="_blank" class="btn btn-xs btn-outline-danger py-0 px-2" title="Open lead detail">
+              <i class="fas fa-external-link-alt"></i> Open Lead
+            </a>
+          </div>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+
+    <!-- Priorities Today -->
     {% if b.metrics.top_leads %}
-    <div class="small text-muted">Priorities today:</div>
-    <ul class="small mb-0 ps-3">
+    <div class="small fw-semibold text-muted mb-1"><i class="fas fa-star text-warning me-1"></i>Priorities Today:</div>
+    <ul class="list-unstyled small mb-2 ps-1">
       {% for l in b.metrics.top_leads %}
-      <li>
-        <a href="{% url 'leads:lead_detail' l.id %}">{{ l.name }}</a>
-        {% if l.company %}<span class="text-secondary">({{ l.company }})</span>{% endif %}
-        <span class="text-muted">[{{ l.priority|title }} | {{ l.status }}{% if l.next_follow_up %}, follow-up {{ l.next_follow_up|date:"d M" }}{% endif %}{% if l.days_overdue %}, {{ l.days_overdue }}d overdue{% endif %}]</span>
+      <li class="py-1 border-bottom border-light-subtle d-flex justify-content-between align-items-center flex-wrap gap-1">
+        <div>
+          <a href="{% url 'leads:lead_detail' l.id %}" target="_blank" class="fw-semibold text-primary text-decoration-none">
+            {{ l.name }}
+          </a>
+          {% if l.company %}<span class="text-secondary ms-1">({{ l.company }})</span>{% endif %}
+          <span class="text-muted ms-1">[{{ l.priority|title }} | {{ l.status }}{% if l.next_follow_up %}, follow-up {{ l.next_follow_up|date:"d M" }}{% endif %}{% if l.days_overdue %}, {{ l.days_overdue }}d overdue{% endif %}]</span>
+        </div>
+        <a href="{% url 'leads:lead_detail' l.id %}" target="_blank" class="btn btn-xs btn-outline-primary py-0 px-2" title="Open lead detail">
+          <i class="fas fa-external-link-alt"></i> Open Lead
+        </a>
       </li>
       {% endfor %}
     </ul>
+    {% endif %}
+
+    <!-- Collapsible details for stalled or unassigned leads -->
+    {% if b.metrics.stalled_leads or b.metrics.unassigned_leads %}
+    <details class="mt-2">
+      <summary class="small text-muted cursor-pointer" style="cursor: pointer;">
+        View stalled (7d+) &amp; unassigned leads details
+      </summary>
+      <div class="mt-2 pt-2 border-top">
+        {% if b.metrics.stalled_leads %}
+        <div class="mb-2">
+          <div class="small fw-bold text-secondary mb-1">Stalled Leads (no interaction 7d+):</div>
+          <ul class="list-unstyled small mb-0 ps-1">
+            {% for sl in b.metrics.stalled_leads %}
+            <li class="py-1 border-bottom border-light-subtle d-flex justify-content-between align-items-center flex-wrap gap-1">
+              <div>
+                <a href="{% url 'leads:lead_detail' sl.id %}" target="_blank" class="text-dark text-decoration-none fw-semibold">
+                  {{ sl.name }}
+                </a>
+                {% if sl.company %}<span class="text-muted ms-1">({{ sl.company }})</span>{% endif %}
+                <span class="text-muted ms-1">[{{ sl.status }}]</span>
+              </div>
+              <a href="{% url 'leads:lead_detail' sl.id %}" target="_blank" class="btn btn-xs btn-outline-secondary py-0 px-2">
+                <i class="fas fa-external-link-alt"></i> Open
+              </a>
+            </li>
+            {% endfor %}
+          </ul>
+        </div>
+        {% endif %}
+
+        {% if b.metrics.unassigned_leads %}
+        <div class="mb-2">
+          <div class="small fw-bold text-secondary mb-1">Unassigned Leads:</div>
+          <ul class="list-unstyled small mb-0 ps-1">
+            {% for ul in b.metrics.unassigned_leads %}
+            <li class="py-1 border-bottom border-light-subtle d-flex justify-content-between align-items-center flex-wrap gap-1">
+              <div>
+                <a href="{% url 'leads:lead_detail' ul.id %}" target="_blank" class="text-dark text-decoration-none fw-semibold">
+                  {{ ul.name }}
+                </a>
+                {% if ul.company %}<span class="text-muted ms-1">({{ ul.company }})</span>{% endif %}
+              </div>
+              <a href="{% url 'leads:lead_detail' ul.id %}" target="_blank" class="btn btn-xs btn-outline-secondary py-0 px-2">
+                <i class="fas fa-external-link-alt"></i> Assign &amp; Open
+              </a>
+            </li>
+            {% endfor %}
+          </ul>
+        </div>
+        {% endif %}
+      </div>
+    </details>
     {% endif %}
   </div>
 </div>
