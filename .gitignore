@@ -62,3 +62,8 @@ logs/
 
 # Manual agent LLM selection (runtime)
 private/agent_llm.json
+
+# Celery Beat schedule files
+celerybeat-schedule/
+celerybeat*
+

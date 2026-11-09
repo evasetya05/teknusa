@@ -126,31 +126,6 @@ services:
       - teknusa_network
     command: python -m celery -A teknusa worker -l info
 
-  celery-beat:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: teknusa_celery_beat
-    restart: unless-stopped
-    environment:
-      - DEBUG=${DEBUG:-False}
-      - SECRET_KEY=${SECRET_KEY:-django-insecure-1234567890}
-      - DB_HOST=db
-      - DB_NAME=teknusas_teknusa
-      - DB_USER=teknusas_teknusa
-      - DB_PASSWORD=${MYSQL_PASSWORD:-@Pontianak123}
-      - REDIS_URL=redis://redis:6379/0
-    volumes:
-      - .:/app
-      - ./media:/app/media
-      - ./celerybeat-schedule:/app/celerybeat-schedule
-    depends_on:
-      - db
-      - redis
-    networks:
-      - teknusa_network
-    command: python -m celery -A teknusa beat -l info --schedule=/app/celerybeat-schedule/celerybeat-schedule
-
 volumes:
   mariadb_data:
     driver: local
