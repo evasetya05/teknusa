@@ -184,8 +184,12 @@ class FinanceCollectorTests(TestCase):
     def test_unbalanced_detected(self):
         cash = self._account(self.entity, "Cash", "ASSET")
         income = self._account(self.entity, "Sales", "INCOME")
-        self._journal(self.entity, date(2026, 10, 3), [(cash, 1000, 0), (income, 0, 900)])
-        self.assertEqual(collect_finance(self.entity, today=TODAY)["unbalanced"], 1)
+        je = self._journal(self.entity, date(2026, 10, 3), [(cash, 1000, 0), (income, 0, 900)])
+        m = collect_finance(self.entity, today=TODAY)
+        self.assertEqual(m["unbalanced"], 1)
+        self.assertEqual(len(m["unbalanced_items"]), 1)
+        self.assertEqual(m["unbalanced_items"][0]["id"], je.id)
+        self.assertEqual(m["unbalanced_items"][0]["difference"], 100)
 
 
 class KanbanCollectorTests(TestCase):
@@ -214,6 +218,9 @@ class KanbanCollectorTests(TestCase):
         self.assertEqual(m["completed_week"], 1)
         self.assertEqual(m["top_tasks"][0]["title"], "Late urgent")
         self.assertEqual(m["columns"][0], {"name": "To Do", "open": 3})
+        self.assertEqual(len(m["overdue_tasks"]), 1)
+        self.assertEqual(m["overdue_tasks"][0]["title"], "Late urgent")
+        self.assertEqual(m["overdue_tasks"][0]["board_id"], self.board.pk)
 
 
 class LeadsCollectorTests(TestCase):
@@ -293,8 +300,9 @@ class BriefingAccessTests(TestCase):
         data = build_briefings(str(self.entity.id))
         self.assertEqual([b["entity"].name for b in data["finance"]], ["Alpha"])
         self.assertEqual([b["metrics"]["board"] for b in data["kanban"]], ["Alpha board"])
+        self.assertEqual([eg["entity"].name for eg in data["kanban_by_entity"]], ["Alpha"])
         self.assertEqual([b["entity"].name for b in data["leads"]], ["Alpha"])
 
     def test_invalid_session_entity_returns_nothing(self):
         data = build_briefings("not-a-uuid")
-        self.assertEqual(data, {"finance": [], "kanban": [], "leads": []})
+        self.assertEqual(data, {"finance": [], "kanban": [], "kanban_by_entity": [], "leads": []})

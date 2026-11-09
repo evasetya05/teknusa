@@ -12,12 +12,15 @@ PRIORITY_RANK = {"urgent": 0, "high": 1, "medium": 2, "low": 3}
 
 
 def _task_row(task, today):
+    board = getattr(task.column, "board", None)
     return {
         "id": task.pk,
         "title": task.title,
         "priority": task.priority,
         "due_date": task.due_date,
         "column": task.column.name,
+        "board_id": board.pk if board else None,
+        "board_name": board.name if board else "",
         "days_overdue": (today - task.due_date).days
         if task.due_date and task.due_date < today
         else 0,
@@ -32,9 +35,13 @@ def collect_board(board, today=None, now=None):
     stalled_before = now - timedelta(days=thresholds["stalled_days"])
     week_ago = now - timedelta(days=7)
 
-    open_tasks = Task.objects.filter(column__board=board, completed=False).select_related("column")
+    open_tasks = Task.objects.filter(column__board=board, completed=False).select_related("column", "column__board")
 
     overdue = list(open_tasks.filter(due_date__lt=today))
+    overdue_sorted = sorted(
+        overdue,
+        key=lambda t: (PRIORITY_RANK.get(t.priority, 9), t.due_date or today),
+    )
     due_soon = list(open_tasks.filter(due_date__gte=today, due_date__lte=soon_limit))
     unassigned = open_tasks.filter(assignees__isnull=True).count()
     stalled = open_tasks.filter(updated_at__lt=stalled_before).count()
@@ -73,6 +80,7 @@ def collect_board(board, today=None, now=None):
         "completed_week": completed_week,
         "columns": columns,
         "top_tasks": [_task_row(t, today) for t in ranked],
+        "overdue_tasks": [_task_row(t, today) for t in overdue_sorted],
     }
 
 

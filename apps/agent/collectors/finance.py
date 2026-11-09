@@ -88,16 +88,35 @@ def unposted_summary(entity):
     return {"count": qs.count(), "oldest_date": oldest}
 
 
-def unbalanced_count(entity):
-    return (
+def unbalanced_summary(entity, limit=20):
+    qs = (
         JournalEntry.objects.filter(entity=entity)
         .annotate(
             total_debit=Coalesce(Sum("items__debit"), 0),
             total_credit=Coalesce(Sum("items__credit"), 0),
         )
         .exclude(total_debit=F("total_credit"))
-        .count()
+        .order_by("-date", "-id")
     )
+    total_count = qs.count()
+    items = []
+    for entry in qs[:limit]:
+        diff = entry.total_debit - entry.total_credit
+        items.append({
+            "id": entry.pk,
+            "date": entry.date,
+            "description": (entry.description or "").strip() or "No description",
+            "period": entry.period,
+            "is_posted": entry.is_posted,
+            "total_debit": entry.total_debit,
+            "total_credit": entry.total_credit,
+            "difference": diff,
+        })
+    return {"count": total_count, "items": items}
+
+
+def unbalanced_count(entity):
+    return unbalanced_summary(entity)["count"]
 
 
 def collect_finance(entity, today=None):
@@ -120,6 +139,7 @@ def collect_finance(entity, today=None):
     expense_changes.sort(key=lambda r: r["delta"], reverse=True)
 
     last_day = calendar.monthrange(today.year, today.month)[1]
+    unbal = unbalanced_summary(entity)
     return {
         "month": today.strftime("%Y-%m"),
         "today": today,
@@ -129,6 +149,7 @@ def collect_finance(entity, today=None):
         "cash": cash_position(entity),
         "open_period": open_period_label(entity, today),
         "unposted": unposted_summary(entity),
-        "unbalanced": unbalanced_count(entity),
+        "unbalanced": unbal["count"],
+        "unbalanced_items": unbal["items"],
         "expense_changes": expense_changes,
     }
