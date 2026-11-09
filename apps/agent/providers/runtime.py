@@ -65,7 +65,7 @@ def clean_override(data):
         if not re.match(r"^https?://[^\s/]+(:\d+)?/?$", url):
             raise ValueError("URL Ollama harus berformat http(s)://host:port.")
     local_model = str(data.get("local_model", "")).strip() or "llama3.2:1b"
-    gemini_model = str(data.get("gemini_model", "")).strip() or "gemini-3.8-flash"
+    gemini_model = str(data.get("gemini_model", "")).strip() or "gemini-1.5-flash"
     if not _MODEL_RE.match(local_model) or not _MODEL_RE.match(gemini_model):
         raise ValueError("Nama model tidak valid.")
     try:

@@ -15,7 +15,7 @@ BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models"
 class GeminiProvider(NarrationProvider):
     name = "gemini"
 
-    def __init__(self, api_key, model="gemini-3.8-flash", timeout=30, max_tokens=400):
+    def __init__(self, api_key, model="gemini-1.5-flash", timeout=30, max_tokens=400):
         self.api_key = api_key
         self.model = model
         self.timeout = timeout
@@ -37,7 +37,11 @@ class GeminiProvider(NarrationProvider):
         request = urllib.request.Request(
             f"{BASE_URL}/{self.model}:generateContent",
             data=payload,
-            headers={"Content-Type": "application/json", "x-goog-api-key": self.api_key},
+            headers={
+                "Content-Type": "application/json",
+                "x-goog-api-key": self.api_key,
+                "User-Agent": "TekNusa-ERP/1.0",
+            },
             method="POST",
         )
         try:

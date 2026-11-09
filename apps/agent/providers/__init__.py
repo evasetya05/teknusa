@@ -20,7 +20,7 @@ from .runtime import get_stored_api_key, load_override
 DEFAULT_CONFIG = {
     "mode": "gemini",
     "local": {"url": "http://ollama:11434", "model": "llama3.2:1b", "timeout": 20},
-    "gemini": {"api_key": "", "model": "gemini-3.8-flash", "timeout": 30},
+    "gemini": {"api_key": "", "model": "gemini-1.5-flash", "timeout": 30},
 }
 
 

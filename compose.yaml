@@ -65,7 +65,10 @@ services:
       - OLLAMA_URL=${OLLAMA_URL:-http://172.18.0.1:11434}
       - OLLAMA_MODEL=${OLLAMA_MODEL:-llama3.2:1b}
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
-      - GEMINI_MODEL=${GEMINI_MODEL:-gemini-3.8-flash}
+      - GEMINI_MODEL=${GEMINI_MODEL:-gemini-1.5-flash}
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
     ports:
       - "8002:8000"
     volumes:

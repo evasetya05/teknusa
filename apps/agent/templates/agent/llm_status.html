@@ -133,16 +133,14 @@
             <div class="row g-2 mb-3">
               <div class="col-sm-8">
                 <label class="form-label small fw-bold" for="id_gemini_model">Model Gemini</label>
-                <input class="form-control form-control-sm" id="id_gemini_model" name="gemini_model" list="gemini-models" value="{{ gemini.model|default:'gemini-3.8-flash' }}" required>
+                <input class="form-control form-control-sm" id="id_gemini_model" name="gemini_model" list="gemini-models" value="{{ gemini.model|default:'gemini-1.5-flash' }}" required>
                 <datalist id="gemini-models">
-                  <option value="gemini-3.8-flash">
-                  <option value="gemini-3.8-pro">
-                  <option value="gemini-3.8-flash-lite">
-                  <option value="gemini-2.5-flash">
-                  <option value="gemini-2.0-flash">
                   <option value="gemini-1.5-flash">
+                  <option value="gemini-2.0-flash">
+                  <option value="gemini-1.5-pro">
+                  <option value="gemini-2.0-flash-lite">
                 </datalist>
-                <div class="form-text" style="font-size: 0.78rem;">Gunakan <code>gemini-3.8-flash</code> untuk performa terbaik.</div>
+                <div class="form-text" style="font-size: 0.78rem;">Rekomendasi Google AI Studio: <code>gemini-1.5-flash</code> (stabil &amp; cepat) atau <code>gemini-2.0-flash</code>.</div>
               </div>
               <div class="col-sm-4">
                 <label class="form-label small fw-bold" for="id_gemini_timeout">Timeout (detik)</label>
@@ -362,7 +360,7 @@
       var key = keyInput ? keyInput.value.trim() : "";
       if (key) params.append("gemini_api_key", key);
       var modelEl = document.getElementById("id_gemini_model");
-      var modelVal = modelEl ? modelEl.value.trim() : "gemini-3.8-flash";
+      var modelVal = modelEl ? modelEl.value.trim() : "gemini-1.5-flash";
       params.append("gemini_model", modelVal);
 
       runTest(params, "Sedang menghubungi Google Gemini API (" + modelVal + ")...");
