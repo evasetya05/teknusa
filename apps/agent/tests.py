@@ -7,6 +7,7 @@ from django.utils import timezone
 
 from entity.models import Entity
 from kanban.models import Board, Column, Task
+from leads.models import Lead, Interaction
 from ledger.models import Account, JournalEntry, JournalItem
 
 from agent.briefing import build_briefings, is_briefing_admin
@@ -16,11 +17,13 @@ from agent.collectors.finance import (
     previous_month_start,
 )
 from agent.collectors.kanban import collect_board
+from agent.collectors.leads import collect_leads
 from agent.rules import (
     CRITICAL,
     Alert,
     finance_alerts,
     kanban_alerts,
+    leads_alerts,
     overall_status,
 )
 
@@ -111,6 +114,37 @@ class KanbanRuleTests(SimpleTestCase):
         self.assertEqual(overall_status([Alert("warning", "x", "m")]), "yellow")
 
 
+class LeadsRuleTests(SimpleTestCase):
+    def metrics(self, **kw):
+        base = {
+            "overdue": 0,
+            "urgent_overdue": 0,
+            "due_today": 0,
+            "due_soon": 0,
+            "hot_count": 0,
+            "unassigned": 0,
+            "stalled": 0,
+            "stalled_hot": 0,
+        }
+        base.update(kw)
+        return base
+
+    def test_overdue_critical_when_hot_or_many(self):
+        warn = leads_alerts(self.metrics(overdue=1))
+        self.assertEqual(warn[0].severity, "warning")
+        crit = leads_alerts(self.metrics(overdue=1, urgent_overdue=1))
+        self.assertEqual(crit[0].severity, CRITICAL)
+        crit_many = leads_alerts(self.metrics(overdue=3))
+        self.assertEqual(crit_many[0].severity, CRITICAL)
+
+    def test_stalled_hot_is_warning(self):
+        alerts = leads_alerts(self.metrics(stalled_hot=1))
+        self.assertEqual(alerts[0].severity, "warning")
+
+    def test_clean_status_is_green(self):
+        self.assertEqual(overall_status(leads_alerts(self.metrics())), "green")
+
+
 class FinanceCollectorTests(TestCase):
     def setUp(self):
         self.entity = Entity.objects.create(name="Alpha", code="ALPHA")
@@ -182,6 +216,55 @@ class KanbanCollectorTests(TestCase):
         self.assertEqual(m["columns"][0], {"name": "To Do", "open": 3})
 
 
+class LeadsCollectorTests(TestCase):
+    def setUp(self):
+        self.entity = Entity.objects.create(name="Alpha", code="ALPHA")
+        self.other = Entity.objects.create(name="Beta", code="BETA")
+
+    def test_counts_and_top_leads(self):
+        today = timezone.localdate()
+        Lead.objects.create(
+            name="Hot Client",
+            entity=self.entity,
+            priority="hot",
+            status="contacted",
+            estimated_value=50000000,
+            next_follow_up=today - timedelta(days=1),
+        )
+        Lead.objects.create(
+            name="Warm Client",
+            entity=self.entity,
+            priority="warm",
+            status="new",
+            estimated_value=15000000,
+            next_follow_up=today,
+        )
+        Lead.objects.create(
+            name="Closed Deal",
+            entity=self.entity,
+            priority="hot",
+            status="won",
+            estimated_value=20000000,
+        )
+        # Other entity lead
+        Lead.objects.create(
+            name="Other Client",
+            entity=self.other,
+            priority="hot",
+            status="new",
+            estimated_value=99999999,
+        )
+
+        m = collect_leads(self.entity, today=today)
+        self.assertEqual(m["open_total"], 2)
+        self.assertEqual(m["pipeline_value"], 65000000.0)
+        self.assertEqual(m["overdue"], 1)
+        self.assertEqual(m["urgent_overdue"], 1)
+        self.assertEqual(m["due_today"], 1)
+        self.assertEqual(m["unassigned"], 2)
+        self.assertEqual(m["top_leads"][0]["name"], "Hot Client")
+
+
 class BriefingAccessTests(TestCase):
     def setUp(self):
         User = get_user_model()
@@ -210,7 +293,8 @@ class BriefingAccessTests(TestCase):
         data = build_briefings(str(self.entity.id))
         self.assertEqual([b["entity"].name for b in data["finance"]], ["Alpha"])
         self.assertEqual([b["metrics"]["board"] for b in data["kanban"]], ["Alpha board"])
+        self.assertEqual([b["entity"].name for b in data["leads"]], ["Alpha"])
 
     def test_invalid_session_entity_returns_nothing(self):
         data = build_briefings("not-a-uuid")
-        self.assertEqual(data, {"finance": [], "kanban": []})
+        self.assertEqual(data, {"finance": [], "kanban": [], "leads": []})

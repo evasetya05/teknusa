@@ -102,3 +102,37 @@ def kanban_alerts(board_metrics, thresholds=None):
         alerts.append(Alert(INFO, "unassigned",
                             f"{m['unassigned']} open task(s) have no assignee."))
     return sort_alerts(alerts)
+
+
+def leads_alerts(lead_metrics, thresholds=None):
+    t = thresholds or get_thresholds()
+    alerts = []
+    m = lead_metrics
+
+    if m["overdue"]:
+        critical = m["urgent_overdue"] > 0 or m["overdue"] >= t.get("lead_overdue_critical_count", 3)
+        msg = f"{m['overdue']} lead(s) overdue for follow-up"
+        if m["urgent_overdue"]:
+            msg += f" (including {m['urgent_overdue']} hot lead{'s' if m['urgent_overdue'] > 1 else ''})"
+        msg += "."
+        alerts.append(Alert(CRITICAL if critical else WARNING, "lead_overdue", msg))
+
+    if m.get("stalled_hot"):
+        alerts.append(Alert(WARNING, "lead_stalled_hot",
+                            f"{m['stalled_hot']} hot lead(s) with no interaction in {t.get('lead_stalled_days', 7)}+ days."))
+    elif m.get("stalled"):
+        alerts.append(Alert(INFO, "lead_stalled",
+                            f"{m['stalled']} lead(s) with no interaction in {t.get('lead_stalled_days', 7)}+ days."))
+
+    if m["due_today"]:
+        alerts.append(Alert(INFO, "lead_due_today",
+                            f"{m['due_today']} lead(s) scheduled for follow-up today."))
+    elif m["due_soon"]:
+        alerts.append(Alert(INFO, "lead_due_soon",
+                            f"{m['due_soon']} lead(s) due for follow-up in the next {t.get('lead_due_soon_days', 3)} days."))
+
+    if m["unassigned"]:
+        alerts.append(Alert(WARNING if m["hot_count"] and m["unassigned"] else INFO, "lead_unassigned",
+                            f"{m['unassigned']} open lead(s) have no assignee."))
+
+    return sort_alerts(alerts)

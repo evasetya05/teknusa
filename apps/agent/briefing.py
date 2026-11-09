@@ -5,9 +5,10 @@ from entity.models import Entity
 
 from agent.collectors.finance import collect_finance
 from agent.collectors.kanban import collect_board
+from agent.collectors.leads import collect_leads
 from agent.llm_narrator import narrate
-from agent.narrator import narrate_board, narrate_finance
-from agent.rules import finance_alerts, kanban_alerts, overall_status
+from agent.narrator import narrate_board, narrate_finance, narrate_leads
+from agent.rules import finance_alerts, kanban_alerts, leads_alerts, overall_status
 from kanban.models import Board
 
 
@@ -54,15 +55,32 @@ def build_board_briefing(board, today=None):
     }
 
 
+def build_leads_briefing(entity, today=None):
+    metrics = collect_leads(entity, today=today)
+    alerts = leads_alerts(metrics)
+    narration, source = narrate(narrate_leads(entity.name, metrics, alerts), alerts)
+    return {
+        "entity": entity,
+        "status": overall_status(alerts),
+        "alerts": alerts,
+        "metrics": metrics,
+        "narration": narration,
+        "narration_source": source,
+    }
+
+
 def build_briefings(session_entity_id, today=None):
-    """Full dashboard payload: finance per entity, kanban per board."""
+    """Full dashboard payload: finance per entity, kanban per board, leads per entity."""
     entities = resolve_entities(session_entity_id)
     finance = [build_finance_briefing(e, today=today) for e in entities]
 
     boards = Board.objects.filter(entity__in=entities).order_by("name")
     kanban = [build_board_briefing(b, today=today) for b in boards]
 
+    leads = [build_leads_briefing(e, today=today) for e in entities]
+
     order = {"red": 0, "yellow": 1, "green": 2}
     finance.sort(key=lambda b: order[b["status"]])
     kanban.sort(key=lambda b: order[b["status"]])
-    return {"finance": finance, "kanban": kanban}
+    leads.sort(key=lambda b: order[b["status"]])
+    return {"finance": finance, "kanban": kanban, "leads": leads}

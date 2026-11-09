@@ -31,6 +31,28 @@ def narrate_finance(entity_name, metrics, alerts):
     return " ".join(parts)
 
 
+def narrate_leads(entity_name, metrics, alerts):
+    pipeline = _money(metrics["pipeline_value"])
+    parts = [
+        f"{entity_name}: {metrics['open_total']} open lead(s) with pipeline potential of {pipeline}."
+    ]
+    if metrics["new_month"]:
+        parts.append(f"{metrics['new_month']} new lead(s) this month.")
+    if metrics["won_month"]:
+        parts.append(f"{metrics['won_month']} deal(s) won this month.")
+    if metrics["overdue"]:
+        parts.append(f"{metrics['overdue']} follow-up(s) overdue.")
+    if metrics["due_today"]:
+        parts.append(f"{metrics['due_today']} due for follow-up today.")
+    if metrics["top_leads"]:
+        first = metrics["top_leads"][0]
+        co = f" ({first['company']})" if first.get("company") else ""
+        parts.append(f"Focus today on '{first['name']}'{co} [{first['priority'].capitalize()}].")
+    if not alerts:
+        parts.append("Pipeline is on track.")
+    return " ".join(parts)
+
+
 def narrate_board(metrics, alerts):
     parts = [
         f"Board {metrics['board']}: {metrics['open_total']} open task(s), "
@@ -45,4 +67,26 @@ def narrate_board(metrics, alerts):
         parts.append(f"Focus today on '{first['title']}' ({first['priority']}).")
     if not alerts:
         parts.append("No issues detected.")
+    return " ".join(parts)
+
+
+def narrate_leads(entity_name, metrics, alerts):
+    pipeline = _money(metrics["pipeline_value"])
+    parts = [
+        f"{entity_name}: {metrics['open_total']} open lead(s) with pipeline potential of {pipeline}."
+    ]
+    if metrics["new_month"]:
+        parts.append(f"{metrics['new_month']} new lead(s) this month.")
+    if metrics["won_month"]:
+        parts.append(f"{metrics['won_month']} deal(s) won this month.")
+    if metrics["overdue"]:
+        parts.append(f"{metrics['overdue']} follow-up(s) overdue.")
+    if metrics["due_today"]:
+        parts.append(f"{metrics['due_today']} due for follow-up today.")
+    if metrics["top_leads"]:
+        first = metrics["top_leads"][0]
+        co = f" ({first['company']})" if first.get("company") else ""
+        parts.append(f"Focus today on '{first['name']}'{co} [{first['priority'].capitalize()}].")
+    if not alerts:
+        parts.append("Pipeline is on track.")
     return " ".join(parts)

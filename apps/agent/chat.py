@@ -12,11 +12,12 @@ from django.core.cache import cache
 
 from agent.collectors.finance import collect_finance
 from agent.collectors.kanban import collect_board
+from agent.collectors.leads import collect_leads
 from agent.briefing import resolve_entities
 from agent.llm_narrator import MAX_OUTPUT_CHARS, _numbers, build_facts
-from agent.narrator import narrate_board, narrate_finance
+from agent.narrator import narrate_board, narrate_finance, narrate_leads
 from agent.providers import ProviderError, get_chain
-from agent.rules import finance_alerts, kanban_alerts
+from agent.rules import finance_alerts, kanban_alerts, leads_alerts
 from kanban.models import Board
 
 logger = logging.getLogger(__name__)
@@ -57,6 +58,16 @@ def build_chat_facts(session_entity_id="all", today=None):
         metrics = collect_board(board, today=today)
         alerts = kanban_alerts(metrics)
         blocks.append(build_facts(narrate_board(metrics, alerts), alerts))
+    for entity in entities:
+        leads_metrics = collect_leads(entity, today=today)
+        l_alerts = leads_alerts(leads_metrics)
+        blocks.append(build_facts(narrate_leads(entity.name, leads_metrics, l_alerts), l_alerts))
+        for lead in leads_metrics["top_leads"][:2]:
+            company_str = f" ({lead['company']})" if lead.get("company") else ""
+            blocks.append(
+                f"- Lead prioritas {entity.name}: {lead['name']}{company_str}, "
+                f"status {lead['status']}, nilai Rp {lead['estimated_value']:,.0f}."
+            )
     return "\n".join(blocks)[:MAX_FACTS_CHARS]
 
 

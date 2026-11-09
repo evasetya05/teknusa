@@ -16,6 +16,11 @@ DEFAULTS = {
     "stalled_days": 7,
     "overdue_critical_count": 5,
     "top_priority_count": 3,
+    # Leads / CRM
+    "lead_due_soon_days": 3,
+    "lead_stalled_days": 7,
+    "lead_overdue_critical_count": 3,
+    "lead_top_priority_count": 3,
 }
 
 
