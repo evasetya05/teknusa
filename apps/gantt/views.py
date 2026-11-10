@@ -83,19 +83,33 @@ def gantt_view(request):
         selected_board = next((b for b in boards if b.pk == int(board_id)), None)
 
     show_done = request.GET.get("done") == "1"
+    show_nodate = request.GET.get("nodate") == "1"
     scope_boards = [selected_board] if selected_board else boards
 
-    tasks = Task.objects.select_related("column__board__entity", "gantt_baseline").prefetch_related("assignees")
-    tasks = tasks.filter(column__board__in=scope_boards)
+    base_tasks = Task.objects.select_related("column__board__entity", "gantt_baseline").prefetch_related("assignees")
+    base_tasks = base_tasks.filter(column__board__in=scope_boards)
     if not show_done:
-        tasks = tasks.filter(completed=False)
-    tasks = tasks.exclude(start_date__isnull=True, due_date__isnull=True).order_by(
+        base_tasks = base_tasks.filter(completed=False)
+
+    no_date_count = base_tasks.filter(start_date__isnull=True, due_date__isnull=True).count()
+
+    if show_nodate:
+        tasks = base_tasks
+    else:
+        tasks = base_tasks.exclude(start_date__isnull=True, due_date__isnull=True)
+
+    tasks = tasks.order_by(
         "column__board__entity__name", "column__board__name", "start_date", "due_date", "id"
     )
 
     rows = []
     for t in tasks:
         start, end = _dates(t)
+        is_nodate = False
+        if not start or not end:
+            start = today
+            end = today
+            is_nodate = True
         stats = t.checklist_stats
         bl = getattr(t, "gantt_baseline", None)
         entity_name = t.column.board.entity.name if t.column.board.entity else "Umum (Tanpa PT)"
@@ -110,10 +124,11 @@ def gantt_view(request):
             "column": t.column.name,
             "start": start.isoformat(),
             "end": end.isoformat(),
+            "is_nodate": is_nodate,
             "priority": t.priority,
-            "color": PRIORITY_COLORS.get(t.priority, "#3b82f6"),
+            "color": "#94a3b8" if is_nodate else PRIORITY_COLORS.get(t.priority, "#3b82f6"),
             "completed": t.completed,
-            "overdue": (not t.completed) and end < today,
+            "overdue": (not t.completed) and (not is_nodate) and end < today,
             "progress": 100 if t.completed else (stats["percent"] if stats else 0),
             "assignees": [u.get_full_name() or u.username for u in t.assignees.all()],
             "url": reverse("kanban:task_edit", args=[t.pk]),
@@ -163,6 +178,7 @@ def gantt_view(request):
         "boards": boards,
         "selected_board": selected_board,
         "show_done": show_done,
+        "show_nodate": show_nodate,
         "data_json": json.dumps(data),
         "task_count": len(rows),
         "milestone_count": len(milestones),

@@ -31,6 +31,7 @@
 .g-bar.dragging { cursor:grabbing; opacity:.85; z-index:10; }
 .g-bar.done { opacity:.55; }
 .g-bar.overdue { outline:2px solid #991b1b; }
+.g-bar.nodate { border:2px dashed #f59e0b; opacity:.85; }
 .g-bar.linking { cursor:crosshair; animation:pulse-link 1.2s infinite; }
 .g-bar.pick { outline:3px solid #16a34a !important; box-shadow:0 0 12px rgba(22,163,74,.6); }
 @keyframes pulse-link { 0% { outline:2px solid #3b82f6; } 50% { outline:2px solid #93c5fd; } 100% { outline:2px solid #3b82f6; } }
@@ -103,10 +104,15 @@
         </select>
       </div>
 
-      <!-- 3. Toggle Selesai -->
+      <!-- 3. Toggle Selesai & Draft Tanggal -->
       <div class="form-check form-switch mb-0 ms-1">
         <input class="form-check-input" type="checkbox" name="done" value="1" id="gdone" {% if show_done %}checked{% endif %} onchange="this.form.submit()">
         <label class="form-check-label small" for="gdone">Selesai</label>
+      </div>
+
+      <div class="form-check form-switch mb-0 ms-1">
+        <input class="form-check-input" type="checkbox" name="nodate" value="1" id="gnodate" {% if show_nodate %}checked{% endif %} onchange="this.form.submit()">
+        <label class="form-check-label small" for="gnodate" title="Tampilkan task yang belum memiliki tanggal mulai & jatuh tempo (dijadwalkan sementara ke hari ini)">Draft Tanggal</label>
       </div>
 
       <!-- 4. Zoom Buttons -->
@@ -198,10 +204,17 @@
         <div class="g-grid" id="g-grid"></div>
       </div>
     {% else %}
-      <div class="text-center text-muted py-5">
+      <div class="text-center text-muted py-5 px-3">
         <i class="fas fa-stream fa-2x mb-2 text-secondary"></i>
         <div class="fw-bold">Tidak ada task dengan rentang tanggal atau milestone pada filter ini.</div>
-        <small>Silakan pilih perusahaan/board lain atau tambahkan tanggal mulai &amp; jatuh tempo pada task Kanban.</small>
+        {% if no_date_count and not show_nodate %}
+          <p class="small text-muted mt-1 mb-3">Terdapat <strong>{{ no_date_count }}</strong> task pada board ini yang belum diisi tanggal mulai &amp; jatuh temponya.</p>
+          <a href="?entity={{ selected_entity_id }}&board={{ selected_board.pk|default:'' }}&nodate=1" class="btn btn-sm btn-primary">
+            <i class="fas fa-calendar-plus me-1"></i>Tampilkan {{ no_date_count }} Task Draft Tanggal di Gantt Chart
+          </a>
+        {% else %}
+          <small>Silakan pilih perusahaan/board lain atau tambahkan tanggal mulai &amp; jatuh tempo pada task Kanban.</small>
+        {% endif %}
       </div>
     {% endif %}
   </div>
@@ -330,8 +343,69 @@ function onEntityChange(val) {
   document.getElementById('gantt-filter-form').submit();
 }
 
-var DATA = JSON.parse(JSON.parse(document.getElementById('g-data').textContent));
-var rows = DATA.rows || [], deps = DATA.deps || [], miles = DATA.milestones || [], isAllEntities = DATA.is_all_entities;
+var DATA = { rows: [], deps: [], milestones: [], is_all_entities: false };
+try {
+  var rawText = document.getElementById('g-data').textContent;
+  var parsed = JSON.parse(rawText);
+  DATA = (typeof parsed === 'string') ? JSON.parse(parsed) : parsed;
+} catch (e) {
+  console.error("Gantt JSON parse error:", e);
+}
+var rows = (DATA && DATA.rows) || [],
+    deps = (DATA && DATA.deps) || [],
+    miles = (DATA && DATA.milestones) || [],
+    isAllEntities = !!(DATA && DATA.is_all_entities);
+
+// Standalone Modal Helper that works with BS4, BS5, jQuery, or Vanilla JS
+function ModalHelper(id) {
+  var el = (typeof id === 'string') ? document.getElementById(id) : id;
+  if (!el) return { show: function() {}, hide: function() {} };
+  var inst = {
+    show: function () {
+      if (window.bootstrap && window.bootstrap.Modal) {
+        try {
+          var m = bootstrap.Modal.getInstance(el) || new bootstrap.Modal(el);
+          m.show(); return;
+        } catch (e) {}
+      }
+      if (window.$ && $(el).modal) {
+        try { $(el).modal('show'); return; } catch (e) {}
+      }
+      el.style.display = 'block';
+      el.classList.add('show');
+      document.body.classList.add('modal-open');
+      var bdId = 'backdrop-' + (el.id || 'modal');
+      var bd = document.getElementById(bdId);
+      if (!bd) {
+        bd = document.createElement('div');
+        bd.id = bdId;
+        bd.className = 'modal-backdrop fade show';
+        bd.onclick = function () { inst.hide(); };
+        document.body.appendChild(bd);
+      }
+    },
+    hide: function () {
+      if (window.bootstrap && window.bootstrap.Modal) {
+        try {
+          var m = bootstrap.Modal.getInstance(el);
+          if (m) { m.hide(); return; }
+        } catch (e) {}
+      }
+      if (window.$ && $(el).modal) {
+        try { $(el).modal('hide'); return; } catch (e) {}
+      }
+      el.style.display = 'none';
+      el.classList.remove('show');
+      document.body.classList.remove('modal-open');
+      var bd = document.getElementById('backdrop-' + (el.id || 'modal'));
+      if (bd) bd.remove();
+    }
+  };
+  el.querySelectorAll('[data-bs-dismiss="modal"], [data-dismiss="modal"], .btn-close').forEach(function (btn) {
+    btn.onclick = function () { inst.hide(); };
+  });
+  return inst;
+}
 
 // Populate ms-task select when ms-board changes
 function onMsBoardChange(boardId) {
@@ -370,9 +444,17 @@ function onMsBoardChange(boardId) {
   var dw = parseFloat(localStorage.getItem('gantt-dw') || '14');
   var linkMode = false, linkSourceId = null, lbl;
 
-  function d(s) { var p = s.split('-'); return Date.UTC(+p[0], +p[1] - 1, +p[2]); }
+  function d(s) {
+    if (!s) return d(TODAY);
+    if (typeof s !== 'string') s = String(s);
+    var p = s.split('T')[0].split('-');
+    if (p.length < 3) return d(TODAY);
+    var y = +p[0], m = +p[1] - 1, day = +p[2];
+    if (isNaN(y) || isNaN(m) || isNaN(day)) return d(TODAY);
+    return Date.UTC(y, m, day);
+  }
   function iso(t) { return new Date(t).toISOString().slice(0, 10); }
-  function esc(s) { var x = document.createElement('div'); x.textContent = s; return x.innerHTML; }
+  function esc(s) { var x = document.createElement('div'); x.textContent = s || ''; return x.innerHTML; }
   function rowById(id) { return rows.filter(function (r) { return r.id == id; })[0]; }
 
   // Initial populate of ms-task select
@@ -430,9 +512,8 @@ function onMsBoardChange(boardId) {
     });
   });
 
-  // Modal: Arrow Dialog
-  var arrowModalEl = document.getElementById('arrowModal');
-  var arrowModal = arrowModalEl ? new bootstrap.Modal(arrowModalEl) : null;
+  // Modal: Arrow Dialog (uses ModalHelper)
+  var arrowModal = ModalHelper('arrowModal');
   var arrowModalBtn = document.getElementById('g-link-modal-btn');
   if (arrowModalBtn && arrowModal) {
     arrowModalBtn.addEventListener('click', function () {
@@ -469,9 +550,8 @@ function onMsBoardChange(boardId) {
     });
   }
 
-  // Modal: Quick Action Task
-  var taskModalEl = document.getElementById('taskQuickModal');
-  var taskModal = taskModalEl ? new bootstrap.Modal(taskModalEl) : null;
+  // Modal: Quick Action Task (uses ModalHelper)
+  var taskModal = ModalHelper('taskQuickModal');
   var currentActiveTaskId = null;
 
   function openTaskQuickModal(task) {
@@ -515,7 +595,7 @@ function onMsBoardChange(boardId) {
         if (j.ok) {
           if (taskModal) taskModal.hide();
           var r = rowById(currentActiveTaskId);
-          if (r) { r.start = s; r.end = en; }
+          if (r) { r.start = s; r.end = en; r.is_nodate = false; }
           render();
         } else fail(j);
       });
@@ -551,12 +631,20 @@ function onMsBoardChange(boardId) {
 
   var all = [d(TODAY)];
   rows.forEach(function (r) {
-    all.push(d(r.start), d(r.end));
-    if (r.baseline) all.push(d(r.baseline.start), d(r.baseline.end));
+    if (r.start) all.push(d(r.start));
+    if (r.end) all.push(d(r.end));
+    if (r.baseline) {
+      if (r.baseline.start) all.push(d(r.baseline.start));
+      if (r.baseline.end) all.push(d(r.baseline.end));
+    }
   });
-  miles.forEach(function (m) { all.push(d(m.date)); });
+  miles.forEach(function (m) { if (m.date) all.push(d(m.date)); });
   var min = Math.min.apply(null, all) - 7 * DAY, max = Math.max.apply(null, all) + 14 * DAY;
-  var days = Math.round((max - min) / DAY) + 1;
+  if (isNaN(min) || isNaN(max) || min >= max) {
+    min = d(TODAY) - 7 * DAY;
+    max = d(TODAY) + 30 * DAY;
+  }
+  var days = Math.max(7, Math.round((max - min) / DAY) + 1);
 
   // Separate board-level milestones and task-specific milestones
   var boardMilestones = {}; // board_id -> [m, ...]
@@ -576,7 +664,7 @@ function onMsBoardChange(boardId) {
   function grp(id, name, entity) {
     if (!(id in gi)) {
       gi[id] = groups.length;
-      groups.push({ id: id, name: name, entity: entity || "Umum (Tanpa PT)", items: [] });
+      groups.push({ id: id, name: name || "Board", entity: entity || "Umum (Tanpa PT)", items: [] });
     }
     return groups[gi[id]];
   }
@@ -584,9 +672,10 @@ function onMsBoardChange(boardId) {
 
   // When viewing all companies, sort groups by Entity first, then Board name
   groups.sort(function (a, b) {
-    var ea = (a.entity || "").toLowerCase(), eb = (b.entity || "").toLowerCase();
+    var ea = (a.entity || "").toString().toLowerCase(), eb = (b.entity || "").toString().toLowerCase();
     if (ea !== eb) return ea.localeCompare(eb);
-    return a.name.toLowerCase().localeCompare(b.name.toLowerCase());
+    var na = (a.name || "").toString().toLowerCase(), nb = (b.name || "").toString().toLowerCase();
+    return na.localeCompare(nb);
   });
 
   function render() {
@@ -645,9 +734,9 @@ function onMsBoardChange(boardId) {
                 '</div>' +
                 '</div>';
 
-        var x = (d(r.start) - min) / DAY * dw, w = ((d(r.end) - d(r.start)) / DAY + 1) * dw;
+        var x = (d(r.start) - min) / DAY * dw, w = Math.max(dw, ((d(r.end) - d(r.start)) / DAY + 1) * dw);
         pos[r.id] = { x: x, w: w, y: rowIdx * RH + 16 };
-        var tip = r.title + '\nPerusahaan: ' + r.entity + '\nBoard: ' + r.board + '\n' + r.start + ' → ' + r.end + '\nKolom: ' + r.column + (r.assignees.length ? '\nAssignee: ' + r.assignees.join(', ') : '') + '\n(Geser bar untuk ubah tanggal, klik untuk opsi)';
+        var tip = (r.is_nodate ? '[DRAFT - BELUM ADA TANGGAL]\n' : '') + r.title + '\nPerusahaan: ' + r.entity + '\nBoard: ' + r.board + '\n' + r.start + ' → ' + r.end + '\nKolom: ' + r.column + (r.assignees.length ? '\nAssignee: ' + r.assignees.join(', ') : '') + '\n(Geser bar untuk ubah tanggal, klik untuk opsi)';
 
         var base = '';
         if (r.baseline) {
@@ -663,9 +752,11 @@ function onMsBoardChange(boardId) {
                         '<div class="g-mslbl" style="left:' + (mx + 22) + 'px">' + esc(m.title) + '</div>';
         });
 
+        var nodateCls = r.is_nodate ? ' nodate' : '';
+        var nodateBadge = r.is_nodate ? '<span class="badge bg-warning text-dark me-1" style="font-size:0.6rem;padding:1px 3px;">Draft</span>' : '';
         track += '<div class="g-track">' + bg + base + msTaskHtml +
-          '<div class="g-bar' + (r.completed ? ' done' : '') + (r.overdue ? ' overdue' : '') + (linkMode ? ' linking' : '') + (linkSourceId == r.id ? ' pick' : '') + '" data-id="' + r.id + '" style="left:' + x + 'px;width:' + w + 'px;background:' + r.color + '" title="' + esc(tip) + '">' +
-          '<div class="g-prog" style="width:' + r.progress + '%"></div><div class="g-h l" title="Tarik untuk ubah tanggal mulai"></div><span>' + esc(r.title) + '</span><div class="g-h r" title="Tarik untuk ubah tanggal jatuh tempo"></div>' +
+          '<div class="g-bar' + nodateCls + (r.completed ? ' done' : '') + (r.overdue ? ' overdue' : '') + (linkMode ? ' linking' : '') + (linkSourceId == r.id ? ' pick' : '') + '" data-id="' + r.id + '" style="left:' + x + 'px;width:' + w + 'px;background:' + r.color + '" title="' + esc(tip) + '">' +
+          '<div class="g-prog" style="width:' + r.progress + '%"></div><div class="g-h l" title="Tarik untuk ubah tanggal mulai"></div><span>' + nodateBadge + esc(r.title) + '</span><div class="g-h r" title="Tarik untuk ubah tanggal jatuh tempo"></div>' +
           '<div class="g-conn" title="Tarik / Klik untuk membuat panah relasi"></div>' +
           '</div></div>';
         rowIdx++;
@@ -677,6 +768,8 @@ function onMsBoardChange(boardId) {
     deps.forEach(function (dp) {
       var a = pos[dp.from], b = pos[dp.to];
       if (!a || !b) return;
+      var toRow = rowById(dp.to), fromRow = rowById(dp.from);
+      if (!toRow || !fromRow) return;
       var x1 = a.x + a.w, y1 = a.y, x2 = b.x, y2 = b.y, p;
       if (x2 >= x1 + 14) {
         p = 'M' + x1 + ',' + y1 + ' H' + (x1 + 7) + ' V' + y2 + ' H' + (x2 - 1);
@@ -684,7 +777,7 @@ function onMsBoardChange(boardId) {
         var ym = y2 > y1 ? y1 + RH / 2 : y1 - RH / 2;
         p = 'M' + x1 + ',' + y1 + ' H' + (x1 + 7) + ' V' + ym + ' H' + (x2 - 8) + ' V' + y2 + ' H' + (x2 - 1);
       }
-      var bad = d(rowById(dp.to).start) <= d(rowById(dp.from).end);
+      var bad = d(toRow.start) <= d(fromRow.end);
       paths += '<path class="arrow' + (bad ? ' bad' : '') + '" d="' + p + '" marker-end="url(#g-arr' + (bad ? 'b' : '') + ')"/>' +
                '<path class="hit" data-dep="' + dp.id + '" d="' + p + '"><title>Klik panah ini untuk menghapus relasi</title></path>';
     });
@@ -849,7 +942,7 @@ function onMsBoardChange(boardId) {
         var en = iso(min + (s0 + n - 1) * DAY);
         post(u('dates', id), { start: s, end: en }).then(function (j) {
           if (!j.ok) { fail(j); location.reload(); return; }
-          r.start = s; r.end = en; r.overdue = !r.completed && d(en) < d(TODAY);
+          r.start = s; r.end = en; r.is_nodate = false; r.overdue = !r.completed && d(en) < d(TODAY);
           render();
         }).catch(function () { alert('Gagal menyimpan perubahan jadwal.'); location.reload(); });
       }, false);
