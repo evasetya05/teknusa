@@ -28,6 +28,7 @@ from .models import (
     Task,
     TaskComment,
     TaskAttachment,
+    TaskChecklistItem,
 )
 from entity.models import Entity
 
@@ -217,6 +218,18 @@ class TaskUpdateView(LoginRequiredMixin, UpdateView):
         context = super().get_context_data(**kwargs)
         context['comments'] = self.object.comments.select_related('author').all()
         context['attachments'] = self.object.attachments.select_related('uploaded_by').all()
+        checklists = list(self.object.checklists.select_related('completed_by', 'created_by').all())
+        context['checklists'] = checklists
+        context['checklists_pending'] = [c for c in checklists if not c.is_completed]
+        context['checklists_completed'] = [c for c in checklists if c.is_completed]
+        total = len(checklists)
+        completed = len(context['checklists_completed'])
+        context['checklist_stats'] = {
+            'total': total,
+            'completed': completed,
+            'percent': int((completed / total * 100)) if total > 0 else 0,
+            'all_done': (completed == total and total > 0),
+        }
         return context
 
 
@@ -320,3 +333,82 @@ class TaskAttachmentDeleteView(LoginRequiredMixin, DeleteView):
 
     def get_success_url(self):
         return reverse('kanban:task_edit', kwargs={'pk': self.object.task.pk})
+
+
+def _get_task_checklist_stats(task):
+    items = task.checklists.all()
+    total = items.count()
+    completed = items.filter(is_completed=True).count()
+    percent = int(completed / total * 100) if total > 0 else 0
+    return {
+        "total": total,
+        "completed": completed,
+        "percent": percent,
+        "all_done": (completed == total and total > 0),
+    }
+
+
+class TaskChecklistCreateView(LoginRequiredMixin, View):
+    def post(self, request, task_id, *args, **kwargs):
+        task = get_object_or_404(Task, pk=task_id)
+        title = request.POST.get("title", "").strip()
+        if not title:
+            if request.headers.get("x-requested-with") == "XMLHttpRequest" or request.POST.get("ajax"):
+                return JsonResponse({"ok": False, "error": "Title cannot be empty."}, status=400)
+            return redirect("kanban:task_edit", pk=task.pk)
+
+        item = TaskChecklistItem.objects.create(
+            task=task,
+            title=title,
+            created_by=request.user if request.user.is_authenticated else None,
+            position=task.checklists.count(),
+        )
+
+        if request.headers.get("x-requested-with") == "XMLHttpRequest" or request.POST.get("ajax"):
+            return JsonResponse({
+                "ok": True,
+                "item": {
+                    "id": item.id,
+                    "title": item.title,
+                    "is_completed": item.is_completed,
+                    "created_by": item.created_by.get_full_name() or item.created_by.username if item.created_by else None,
+                },
+                "stats": _get_task_checklist_stats(task),
+            })
+        return redirect("kanban:task_edit", pk=task.pk)
+
+
+class TaskChecklistToggleView(LoginRequiredMixin, View):
+    def post(self, request, pk, *args, **kwargs):
+        item = get_object_or_404(TaskChecklistItem, pk=pk)
+        item.is_completed = not item.is_completed
+        if item.is_completed:
+            item.completed_at = timezone.now()
+            item.completed_by = request.user if request.user.is_authenticated else None
+        else:
+            item.completed_at = None
+            item.completed_by = None
+        item.save()
+
+        task = item.task
+        return JsonResponse({
+            "ok": True,
+            "id": item.id,
+            "is_completed": item.is_completed,
+            "stats": _get_task_checklist_stats(task),
+        })
+
+
+class TaskChecklistDeleteView(LoginRequiredMixin, View):
+    def post(self, request, pk, *args, **kwargs):
+        item = get_object_or_404(TaskChecklistItem, pk=pk)
+        task = item.task
+        item.delete()
+
+        if request.headers.get("x-requested-with") == "XMLHttpRequest" or request.POST.get("ajax"):
+            return JsonResponse({
+                "ok": True,
+                "stats": _get_task_checklist_stats(task),
+            })
+        return redirect("kanban:task_edit", pk=task.pk)
+

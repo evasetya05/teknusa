@@ -138,6 +138,20 @@ class Task(models.Model):
             }
         )
 
+    @property
+    def checklist_stats(self):
+        total = self.checklists.count()
+        if total == 0:
+            return None
+        completed = self.checklists.filter(is_completed=True).count()
+        percent = int(completed / total * 100) if total > 0 else 0
+        return {
+            "total": total,
+            "completed": completed,
+            "percent": percent,
+            "all_done": completed == total,
+        }
+
 class TaskComment(models.Model):
     task = models.ForeignKey(
         Task,
@@ -186,3 +200,37 @@ class TaskAttachment(models.Model):
 
     def __str__(self):
         return self.file.name
+
+
+class TaskChecklistItem(models.Model):
+    task = models.ForeignKey(
+        Task,
+        on_delete=models.CASCADE,
+        related_name='checklists'
+    )
+    title = models.CharField(max_length=255)
+    is_completed = models.BooleanField(default=False)
+    position = models.PositiveIntegerField(default=0)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='kanban_checklist_created'
+    )
+    completed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='kanban_checklist_completed'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['position', 'created_at']
+
+    def __str__(self):
+        return f"{self.task.title} - {self.title}"
+

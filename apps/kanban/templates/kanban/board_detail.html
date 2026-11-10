@@ -275,6 +275,11 @@
                                         {% if task.assignees.exists %}
                                         <span><i class="far fa-user me-1"></i>{{ task.assignees.count }}</span>
                                         {% endif %}
+                                        {% if task.checklist_stats %}
+                                        <span class="badge {% if task.checklist_stats.all_done %}bg-success text-white{% else %}bg-secondary bg-opacity-10 text-secondary border{% endif %}" title="{{ task.checklist_stats.completed }}/{{ task.checklist_stats.total }} Checklist Selesai">
+                                            <i class="fas fa-check-square me-1"></i>{{ task.checklist_stats.completed }}/{{ task.checklist_stats.total }}
+                                        </span>
+                                        {% endif %}
                                         {% if task.attachments.count > 0 %}
                                         <span class="badge bg-success bg-opacity-10 text-success border" title="{{ task.attachments.count }} File Lampiran">
                                             <i class="fas fa-paperclip me-1"></i>{{ task.attachments.count }}

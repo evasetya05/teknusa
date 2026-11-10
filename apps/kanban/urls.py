@@ -82,4 +82,19 @@ urlpatterns = [
         TaskAttachmentDeleteView.as_view(),
         name='task_attachment_delete'
     ),
+    path(
+        'task/<int:task_id>/checklist/add/',
+        TaskChecklistCreateView.as_view(),
+        name='task_checklist_add'
+    ),
+    path(
+        'checklist/<int:pk>/toggle/',
+        TaskChecklistToggleView.as_view(),
+        name='task_checklist_toggle'
+    ),
+    path(
+        'checklist/<int:pk>/delete/',
+        TaskChecklistDeleteView.as_view(),
+        name='task_checklist_delete'
+    ),
 ]

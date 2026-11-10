@@ -214,6 +214,102 @@
                             </form>
                         </div>
                     </div>
+
+                    {% if object %}
+                    <!-- ☑️ Card Checklist Task -->
+                    <div class="card border-0 shadow-sm mt-4" id="task-checklist-card">
+                        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                            <h6 class="mb-0 fw-bold">
+                                <i class="fas fa-tasks text-primary me-2"></i>Checklist Pekerjaan
+                            </h6>
+                            <span id="checklist-stats-badge" class="badge {% if checklist_stats.all_done %}bg-success{% elif checklist_stats.total > 0 %}bg-primary{% else %}bg-secondary{% endif %}">
+                                <span id="stat-completed">{{ checklist_stats.completed }}</span>/<span id="stat-total">{{ checklist_stats.total }}</span> Selesai (<span id="stat-percent">{{ checklist_stats.percent }}</span>%)
+                            </span>
+                        </div>
+                        <div class="card-body">
+                            <!-- Progress Bar -->
+                            <div class="progress mb-3" style="height: 8px;">
+                                <div id="checklist-progress-bar" class="progress-bar {% if checklist_stats.all_done %}bg-success{% else %}bg-primary{% endif %}" role="progressbar" style="width: {{ checklist_stats.percent }}%;" aria-valuenow="{{ checklist_stats.percent }}" aria-valuemin="0" aria-valuemax="100"></div>
+                            </div>
+
+                            <!-- Form Tambah Checklist Cepat -->
+                            <form id="add-checklist-form" class="mb-3">
+                                {% csrf_token %}
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0"><i class="fas fa-plus text-muted"></i></span>
+                                    <input type="text" id="new-checklist-title" class="form-control form-control-sm border-start-0" placeholder="Tambah item checklist baru... (tekan Enter)" required>
+                                    <button type="submit" class="btn btn-primary btn-sm px-3" id="btn-add-checklist">
+                                        Tambah
+                                    </button>
+                                </div>
+                            </form>
+
+                            <!-- Grup 1: Belum Selesai (Pending) -->
+                            <div class="mb-3">
+                                <div class="small fw-bold text-uppercase text-muted mb-2 d-flex justify-content-between align-items-center" style="font-size: 0.72rem; letter-spacing: 0.05em;">
+                                    <span><i class="far fa-circle text-warning me-1"></i>Belum Selesai (<span id="pending-count">{{ checklists_pending|length }}</span>)</span>
+                                </div>
+                                <div id="checklist-pending-list" class="list-group list-group-flush">
+                                    {% for item in checklists_pending %}
+                                    <div class="list-group-item px-2 py-2 d-flex justify-content-between align-items-center checklist-row border rounded mb-1 bg-white" data-id="{{ item.id }}">
+                                        <div class="form-check mb-0 d-flex align-items-center flex-grow-1 me-2">
+                                            <input class="form-check-input checklist-toggle me-2 flex-shrink-0" type="checkbox" id="chk-{{ item.id }}" data-id="{{ item.id }}" style="cursor: pointer; width: 1.15em; height: 1.15em;">
+                                            <label class="form-check-label small mb-0 checklist-label" for="chk-{{ item.id }}" style="cursor: pointer;">
+                                                {{ item.title }}
+                                            </label>
+                                        </div>
+                                        <div class="d-flex align-items-center gap-2 flex-shrink-0">
+                                            {% if item.created_by %}
+                                            <small class="text-muted" style="font-size: 0.7rem;">{{ item.created_by.get_full_name|default:item.created_by.username }}</small>
+                                            {% endif %}
+                                            <button type="button" class="btn btn-link text-danger p-0 checklist-delete" data-id="{{ item.id }}" title="Hapus item">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                    <div id="no-pending-msg" class="text-muted small py-2 text-center fst-italic {% if checklists_pending %}d-none{% endif %}">
+                                        Tidak ada item tertunda.
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Grup 2: Sudah Selesai (Completed) -->
+                            <div class="mt-3 pt-2 border-top">
+                                <details {% if checklists_completed %}open{% endif %} id="completed-details">
+                                    <summary class="small fw-bold text-uppercase text-success cursor-pointer mb-2" style="font-size: 0.72rem; letter-spacing: 0.05em; cursor: pointer;">
+                                        <i class="fas fa-check-circle me-1"></i>Sudah Selesai (<span id="completed-count">{{ checklists_completed|length }}</span>)
+                                    </summary>
+                                    <div id="checklist-completed-list" class="list-group list-group-flush mt-2">
+                                        {% for item in checklists_completed %}
+                                        <div class="list-group-item px-2 py-2 d-flex justify-content-between align-items-center checklist-row border rounded mb-1 bg-light text-muted" data-id="{{ item.id }}">
+                                            <div class="form-check mb-0 d-flex align-items-center flex-grow-1 me-2">
+                                                <input class="form-check-input checklist-toggle me-2 flex-shrink-0" type="checkbox" id="chk-{{ item.id }}" data-id="{{ item.id }}" checked style="cursor: pointer; width: 1.15em; height: 1.15em;">
+                                                <label class="form-check-label small mb-0 checklist-label text-decoration-line-through text-muted" for="chk-{{ item.id }}" style="cursor: pointer;">
+                                                    {{ item.title }}
+                                                </label>
+                                            </div>
+                                            <div class="d-flex align-items-center gap-2 flex-shrink-0">
+                                                {% if item.completed_by %}
+                                                <small class="text-muted" style="font-size: 0.7rem;">
+                                                    <i class="fas fa-check me-1 text-success"></i>{{ item.completed_by.get_full_name|default:item.completed_by.username }}
+                                                </small>
+                                                {% endif %}
+                                                <button type="button" class="btn btn-link text-danger p-0 checklist-delete" data-id="{{ item.id }}" title="Hapus item">
+                                                    <i class="fas fa-times"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                        <div id="no-completed-msg" class="text-muted small py-2 text-center fst-italic {% if checklists_completed %}d-none{% endif %}">
+                                            Belum ada item yang diselesaikan.
+                                        </div>
+                                    </div>
+                                </details>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
                 </div>
 
                 {% if object %}
@@ -349,5 +445,223 @@ function closeSidebarOnResize() {
     }
 }
 window.addEventListener('resize', closeSidebarOnResize);
+
+{% if object %}
+(function () {
+    function getCsrfToken() {
+        var match = document.cookie.match(new RegExp('(^|;\\s*)csrftoken=([^;]*)'));
+        if (match) return decodeURIComponent(match[2]);
+        var input = document.querySelector('[name=csrfmiddlewaretoken]');
+        return input ? input.value : "";
+    }
+
+    function updateStats(stats) {
+        if (!stats) return;
+        var bar = document.getElementById('checklist-progress-bar');
+        var badge = document.getElementById('checklist-stats-badge');
+        var statCompleted = document.getElementById('stat-completed');
+        var statTotal = document.getElementById('stat-total');
+        var statPercent = document.getElementById('stat-percent');
+        var pendingCount = document.getElementById('pending-count');
+        var completedCount = document.getElementById('completed-count');
+
+        if (statCompleted) statCompleted.textContent = stats.completed;
+        if (statTotal) statTotal.textContent = stats.total;
+        if (statPercent) statPercent.textContent = stats.percent;
+        if (pendingCount) pendingCount.textContent = stats.total - stats.completed;
+        if (completedCount) completedCount.textContent = stats.completed;
+
+        if (bar) {
+            bar.style.width = stats.percent + '%';
+            bar.setAttribute('aria-valuenow', stats.percent);
+            if (stats.all_done) {
+                bar.classList.remove('bg-primary');
+                bar.classList.add('bg-success');
+            } else {
+                bar.classList.remove('bg-success');
+                bar.classList.add('bg-primary');
+            }
+        }
+
+        if (badge) {
+            badge.className = 'badge ' + (stats.all_done ? 'bg-success' : (stats.total > 0 ? 'bg-primary' : 'bg-secondary'));
+        }
+
+        var noPending = document.getElementById('no-pending-msg');
+        var noCompleted = document.getElementById('no-completed-msg');
+        var pendingRows = document.querySelectorAll('#checklist-pending-list .checklist-row');
+        var completedRows = document.querySelectorAll('#checklist-completed-list .checklist-row');
+
+        if (noPending) noPending.classList.toggle('d-none', pendingRows.length > 0);
+        if (noCompleted) noCompleted.classList.toggle('d-none', completedRows.length > 0);
+    }
+
+    // Add new checklist
+    var addForm = document.getElementById('add-checklist-form');
+    var addInput = document.getElementById('new-checklist-title');
+    var addBtn = document.getElementById('btn-add-checklist');
+    if (addForm && addInput) {
+        addForm.addEventListener('submit', function (e) {
+            e.preventDefault();
+            var title = addInput.value.trim();
+            if (!title) return;
+            addBtn.disabled = true;
+
+            var fd = new FormData();
+            fd.append('title', title);
+            fd.append('ajax', '1');
+
+            fetch("{% url 'kanban:task_checklist_add' task_id=object.pk %}", {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCsrfToken(),
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: fd
+            })
+            .then(function (res) { return res.json(); })
+            .then(function (data) {
+                addBtn.disabled = false;
+                if (data.ok && data.item) {
+                    addInput.value = '';
+                    var pendingList = document.getElementById('checklist-pending-list');
+                    var noPending = document.getElementById('no-pending-msg');
+
+                    var row = document.createElement('div');
+                    row.className = 'list-group-item px-2 py-2 d-flex justify-content-between align-items-center checklist-row border rounded mb-1 bg-white';
+                    row.setAttribute('data-id', data.item.id);
+                    row.innerHTML = '<div class="form-check mb-0 d-flex align-items-center flex-grow-1 me-2">' +
+                        '<input class="form-check-input checklist-toggle me-2 flex-shrink-0" type="checkbox" id="chk-' + data.item.id + '" data-id="' + data.item.id + '" style="cursor: pointer; width: 1.15em; height: 1.15em;">' +
+                        '<label class="form-check-label small mb-0 checklist-label" for="chk-' + data.item.id + '" style="cursor: pointer;">' +
+                        data.item.title +
+                        '</label></div>' +
+                        '<div class="d-flex align-items-center gap-2 flex-shrink-0">' +
+                        (data.item.created_by ? '<small class="text-muted" style="font-size: 0.7rem;">' + data.item.created_by + '</small>' : '') +
+                        '<button type="button" class="btn btn-link text-danger p-0 checklist-delete" data-id="' + data.item.id + '" title="Hapus item"><i class="fas fa-times"></i></button>' +
+                        '</div>';
+
+                    if (noPending) {
+                        pendingList.insertBefore(row, noPending);
+                    } else {
+                        pendingList.appendChild(row);
+                    }
+                    attachEvents(row);
+                    updateStats(data.stats);
+                } else if (data.error) {
+                    alert(data.error);
+                }
+            })
+            .catch(function () {
+                addBtn.disabled = false;
+                alert('Gagal menambahkan checklist. Silakan coba lagi.');
+            });
+        });
+    }
+
+    // Toggle checklist
+    function handleToggle(checkbox) {
+        var id = checkbox.getAttribute('data-id');
+        var row = document.querySelector('.checklist-row[data-id="' + id + '"]');
+        if (!row) return;
+
+        var url = "{% url 'kanban:task_checklist_toggle' pk=0 %}".replace('/0/', '/' + id + '/');
+
+        fetch(url, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCsrfToken(),
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(function (res) { return res.json(); })
+        .then(function (data) {
+            if (data.ok) {
+                var label = row.querySelector('.checklist-label');
+                var pendingList = document.getElementById('checklist-pending-list');
+                var completedList = document.getElementById('checklist-completed-list');
+                var noPending = document.getElementById('no-pending-msg');
+                var noCompleted = document.getElementById('no-completed-msg');
+
+                if (data.is_completed) {
+                    checkbox.checked = true;
+                    if (label) label.className = 'form-check-label small mb-0 checklist-label text-decoration-line-through text-muted';
+                    row.className = 'list-group-item px-2 py-2 d-flex justify-content-between align-items-center checklist-row border rounded mb-1 bg-light text-muted';
+                    if (noCompleted) {
+                        completedList.insertBefore(row, noCompleted);
+                    } else {
+                        completedList.appendChild(row);
+                    }
+                } else {
+                    checkbox.checked = false;
+                    if (label) label.className = 'form-check-label small mb-0 checklist-label';
+                    row.className = 'list-group-item px-2 py-2 d-flex justify-content-between align-items-center checklist-row border rounded mb-1 bg-white';
+                    if (noPending) {
+                        pendingList.insertBefore(row, noPending);
+                    } else {
+                        pendingList.appendChild(row);
+                    }
+                }
+                updateStats(data.stats);
+            }
+        })
+        .catch(function () {
+            checkbox.checked = !checkbox.checked;
+            alert('Gagal mengubah status checklist.');
+        });
+    }
+
+    // Delete checklist
+    function handleDelete(btn) {
+        var id = btn.getAttribute('data-id');
+        var row = document.querySelector('.checklist-row[data-id="' + id + '"]');
+        if (!row) return;
+
+        if (!confirm('Hapus item checklist ini?')) return;
+
+        var url = "{% url 'kanban:task_checklist_delete' pk=0 %}".replace('/0/', '/' + id + '/');
+
+        fetch(url, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCsrfToken(),
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(function (res) { return res.json(); })
+        .then(function (data) {
+            if (data.ok) {
+                row.remove();
+                updateStats(data.stats);
+            }
+        })
+        .catch(function () {
+            alert('Gagal menghapus checklist.');
+        });
+    }
+
+    function attachEvents(parent) {
+        var root = parent || document;
+        var toggles = root.querySelectorAll('.checklist-toggle');
+        toggles.forEach(function (chk) {
+            if (!chk.dataset.bound) {
+                chk.dataset.bound = '1';
+                chk.addEventListener('change', function () { handleToggle(chk); });
+            }
+        });
+        var deletes = root.querySelectorAll('.checklist-delete');
+        deletes.forEach(function (btn) {
+            if (!btn.dataset.bound) {
+                btn.dataset.bound = '1';
+                btn.addEventListener('click', function () { handleDelete(btn); });
+            }
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        attachEvents();
+    });
+    attachEvents();
+})();
+{% endif %}
 </script>
 {% endblock %}
