@@ -68,6 +68,13 @@ def get_sidebar_menu(request):
                     "indent": True,
                 },
                 {
+                    "title": "Gantt Chart",
+                    "icon": "fas fa-stream",
+                    "url": reverse("gantt:index"),
+                    "active": "/gantt" in request.path,
+                    "indent": True,
+                },
+                {
                     "title": "Agent",
                     "icon": "fas fa-robot",
                     "url": reverse("agent:briefing"),

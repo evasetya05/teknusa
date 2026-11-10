@@ -1,0 +1,338 @@
+{% extends "main/layout.html" %}
+
+{% block content %}
+<style>
+.g-wrap { background:#fff; border:1px solid #dee2e6; border-radius:.5rem; overflow:hidden; }
+.g-scroll { overflow:auto; max-height:70vh; position:relative; }
+.g-grid { display:grid; grid-template-columns:260px 1fr; min-width:max-content; }
+.g-left { position:sticky; left:0; z-index:6; background:#fff; border-right:1px solid #dee2e6; }
+.g-head { position:sticky; top:0; z-index:7; background:#f8f9fa; }
+.g-left.g-head { z-index:8; }
+.g-row { height:34px; display:flex; align-items:center; padding:0 .6rem; border-bottom:1px solid #eef0f2; font-size:.82rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.g-row.group { background:#f1f5f9; font-weight:700; font-size:.78rem; text-transform:uppercase; letter-spacing:.04em; color:#475569; }
+.g-row a { color:#212529; text-decoration:none; overflow:hidden; text-overflow:ellipsis; }
+.g-row a:hover { color:#0d6efd; }
+.g-months, .g-days { display:flex; }
+.g-months div { font-size:.75rem; font-weight:700; padding:.2rem .4rem; border-right:1px solid #dee2e6; border-bottom:1px solid #dee2e6; white-space:nowrap; overflow:hidden; }
+.g-days div { font-size:.68rem; text-align:center; color:#6c757d; border-right:1px solid #eef0f2; padding:.15rem 0; }
+.g-days div.we, .g-cell.we { background:#f8f9fb; }
+.g-body { position:relative; }
+.g-line { position:absolute; top:0; bottom:0; width:2px; background:#ef4444; z-index:2; pointer-events:none; }
+.g-track { height:34px; border-bottom:1px solid #eef0f2; position:relative; }
+.g-track.group { background:#f1f5f9; }
+.g-bg { position:absolute; inset:0; display:flex; pointer-events:none; }
+.g-cell { border-right:1px solid #f1f3f5; flex:none; }
+.g-bar { position:absolute; top:5px; height:20px; border-radius:5px; color:#fff; font-size:.7rem; line-height:20px; padding:0 .4rem; cursor:grab; overflow:hidden; white-space:nowrap; box-shadow:0 1px 3px rgba(0,0,0,.2); user-select:none; z-index:3; }
+.g-bar.done { opacity:.55; }
+.g-bar.overdue { outline:2px solid #991b1b; }
+.g-bar.linking { cursor:crosshair; }
+.g-bar.pick { outline:3px solid #16a34a; }
+.g-prog { position:absolute; left:0; top:0; bottom:0; background:rgba(0,0,0,.25); pointer-events:none; }
+.g-bar span { position:relative; }
+.g-h { position:absolute; top:0; bottom:0; width:6px; cursor:ew-resize; }
+.g-h.l { left:0; } .g-h.r { right:0; }
+.g-base { position:absolute; top:27px; height:4px; border-radius:2px; background:#475569; z-index:2; }
+.g-ms { position:absolute; top:7px; width:20px; height:20px; transform:rotate(45deg) scale(.7); background:#8b5cf6; border:2px solid #5b21b6; cursor:grab; z-index:3; }
+.g-ms.done { background:#22c55e; border-color:#15803d; }
+.g-mslbl { position:absolute; top:9px; font-size:.7rem; font-weight:600; color:#5b21b6; white-space:nowrap; z-index:3; pointer-events:none; text-transform:none; letter-spacing:0; }
+.g-svg { position:absolute; left:0; top:0; z-index:4; pointer-events:none; overflow:visible; }
+.g-svg .hit { stroke:transparent; stroke-width:10; fill:none; pointer-events:stroke; cursor:pointer; }
+.g-svg .arrow { stroke:#64748b; stroke-width:1.6; fill:none; }
+.g-svg .arrow.bad { stroke:#dc2626; stroke-dasharray:4 3; }
+.g-leg i { display:inline-block; width:10px; height:10px; border-radius:2px; margin:0 .25rem 0 .75rem; }
+#g-msform { display:none; }
+</style>
+
+<div class="container-fluid mt-5 pt-3">
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <h4 class="mb-0"><i class="fas fa-stream text-primary me-2"></i>Gantt Chart</h4>
+    <form method="get" class="d-flex flex-wrap gap-2 align-items-center">
+      <select name="board" id="g-board" class="form-select form-select-sm" style="width:auto" onchange="this.form.submit()">
+        <option value="">All boards</option>
+        {% for b in boards %}<option value="{{ b.pk }}" {% if selected_board and selected_board.pk == b.pk %}selected{% endif %}>{{ b.name }}{% if b.entity %} - {{ b.entity.name }}{% endif %}</option>{% endfor %}
+      </select>
+      <div class="form-check form-switch mb-0">
+        <input class="form-check-input" type="checkbox" name="done" value="1" id="gdone" {% if show_done %}checked{% endif %} onchange="this.form.submit()">
+        <label class="form-check-label small" for="gdone">Show completed</label>
+      </div>
+      <div class="btn-group btn-group-sm">
+        <button type="button" class="btn btn-outline-secondary" data-zoom="14">Day</button>
+        <button type="button" class="btn btn-outline-secondary" data-zoom="6">Week</button>
+        <button type="button" class="btn btn-outline-secondary" data-zoom="2.5">Month</button>
+      </div>
+      <button type="button" class="btn btn-sm btn-outline-primary" id="g-today">Today</button>
+      <button type="button" class="btn btn-sm btn-outline-success" id="g-link"><i class="fas fa-link me-1"></i>Link tasks</button>
+      <button type="button" class="btn btn-sm btn-outline-secondary" id="g-msbtn"><i class="fas fa-gem me-1"></i>Milestone</button>
+      <div class="btn-group btn-group-sm">
+        <button type="button" class="btn btn-outline-dark dropdown-toggle" id="g-blbtn"><i class="fas fa-flag-checkered me-1"></i>Baseline</button>
+        <ul class="dropdown-menu" id="g-blmenu">
+          <li><a class="dropdown-item" href="#" data-bl="set">Set baseline (new tasks only)</a></li>
+          <li><a class="dropdown-item" href="#" data-bl="overwrite">Reset baseline to current dates</a></li>
+          <li><hr class="dropdown-divider"></li>
+          <li><a class="dropdown-item text-danger" href="#" data-bl="clear">Clear baseline</a></li>
+        </ul>
+      </div>
+    </form>
+  </div>
+
+  <div id="g-msform" class="card card-body py-2 mb-3">
+    <div class="row g-2 align-items-end">
+      <div class="col-md-3"><label class="form-label small mb-0">Board</label>
+        <select id="ms-board" class="form-select form-select-sm">
+          {% for b in boards %}<option value="{{ b.pk }}" {% if selected_board and selected_board.pk == b.pk %}selected{% endif %}>{{ b.name }}{% if b.entity %} - {{ b.entity.name }}{% endif %}</option>{% endfor %}
+        </select></div>
+      <div class="col-md-4"><label class="form-label small mb-0">Title</label><input id="ms-title" class="form-control form-control-sm" maxlength="200" placeholder="e.g. Go-live"></div>
+      <div class="col-md-3"><label class="form-label small mb-0">Date</label><input id="ms-date" type="date" class="form-control form-control-sm" value="{{ today }}"></div>
+      <div class="col-md-2 d-flex gap-1"><button type="button" id="ms-save" class="btn btn-sm btn-primary">Add</button><button type="button" id="ms-cancel" class="btn btn-sm btn-outline-secondary">Cancel</button></div>
+    </div>
+  </div>
+
+  <div class="small text-muted g-leg mb-2">
+    {{ task_count }} task(s), {{ milestone_count }} milestone(s).
+    Drag bars to move, edges to resize. <b>Link tasks</b>: click predecessor then successor; click an arrow to remove it (red dashed = schedule conflict).
+    Milestone: click = done/undone, drag = move, right-click = delete. Thin dark line = baseline.
+    <i style="background:#94a3b8"></i>Low<i style="background:#3b82f6"></i>Medium<i style="background:#f59e0b"></i>High<i style="background:#ef4444"></i>Urgent
+    {% if no_date_count %}<span class="badge bg-warning text-dark ms-3">{{ no_date_count }} task(s) without dates are hidden</span>{% endif %}
+  </div>
+
+  <div class="g-wrap">
+    {% if task_count or milestone_count %}
+    <div class="g-scroll" id="g-scroll"><div class="g-grid" id="g-grid"></div></div>
+    {% else %}
+    <div class="text-center text-muted py-5"><i class="fas fa-stream fa-2x mb-2"></i><div>No tasks with start/due dates and no milestones yet. Set dates on kanban tasks or add a milestone.</div></div>
+    {% endif %}
+  </div>
+</div>
+
+{{ data_json|json_script:"g-data" }}
+<script>
+(function () {
+  var URLS = {
+    dates: "{% url 'gantt:update_dates' 0 %}", depAdd: "{% url 'gantt:dependency_add' %}",
+    depDel: "{% url 'gantt:dependency_delete' 0 %}", msAdd: "{% url 'gantt:milestone_add' %}",
+    msToggle: "{% url 'gantt:milestone_toggle' 0 %}", msMove: "{% url 'gantt:milestone_move' 0 %}",
+    msDel: "{% url 'gantt:milestone_delete' 0 %}", blSet: "{% url 'gantt:baseline_set' %}",
+    blClear: "{% url 'gantt:baseline_clear' %}"
+  };
+  function u(key, id) { return URLS[key].replace('/0/', '/' + id + '/'); }
+  function csrf() { var m = document.cookie.match(/csrftoken=([^;]+)/); return m ? decodeURIComponent(m[1]) : ''; }
+  function post(url, obj) {
+    var fd = new FormData();
+    Object.keys(obj || {}).forEach(function (k) { fd.append(k, obj[k]); });
+    return fetch(url, { method: 'POST', headers: { 'X-CSRFToken': csrf() }, body: fd }).then(function (r) { return r.json(); });
+  }
+  function fail(j) { alert((j && j.error) || 'Failed.'); }
+  function reloadOrFail(j) { if (j.ok) location.reload(); else fail(j); }
+
+  // ---- toolbar (works even with an empty chart) ----
+  var msForm = document.getElementById('g-msform');
+  document.getElementById('g-msbtn').addEventListener('click', function () { msForm.style.display = msForm.style.display === 'block' ? 'none' : 'block'; });
+  document.getElementById('ms-cancel').addEventListener('click', function () { msForm.style.display = 'none'; });
+  document.getElementById('ms-save').addEventListener('click', function () {
+    post(URLS.msAdd, { board: document.getElementById('ms-board').value, title: document.getElementById('ms-title').value, date: document.getElementById('ms-date').value }).then(reloadOrFail);
+  });
+  var blMenu = document.getElementById('g-blmenu');
+  document.getElementById('g-blbtn').addEventListener('click', function (e) { e.stopPropagation(); blMenu.classList.toggle('show'); });
+  document.addEventListener('click', function () { blMenu.classList.remove('show'); });
+  var boardSel = document.getElementById('g-board').value;
+  document.querySelectorAll('[data-bl]').forEach(function (a) {
+    a.addEventListener('click', function (e) {
+      e.preventDefault();
+      var mode = a.dataset.bl, scope = boardSel ? 'the selected board' : 'all visible boards';
+      if (mode === 'clear') {
+        if (!confirm('Clear baselines for ' + scope + '?')) return;
+        post(URLS.blClear, { board: boardSel }).then(reloadOrFail);
+      } else {
+        if (mode === 'overwrite' && !confirm('Replace existing baselines with current dates for ' + scope + '?')) return;
+        post(URLS.blSet, { board: boardSel, overwrite: mode === 'overwrite' ? '1' : '0' })
+          .then(function (j) { if (j.ok) { alert(j.count + ' task(s) baselined.'); location.reload(); } else fail(j); });
+      }
+    });
+  });
+
+  var grid = document.getElementById('g-grid');
+  if (!grid) return;
+  var DATA = JSON.parse(JSON.parse(document.getElementById('g-data').textContent));
+  var rows = DATA.rows, deps = DATA.deps, miles = DATA.milestones;
+  var DAY = 86400000, TODAY = "{{ today }}", RH = 34;
+  var dw = parseFloat(localStorage.getItem('gantt-dw') || '14');
+  var linkMode = false, picked = null, lbl;
+  function d(s) { var p = s.split('-'); return Date.UTC(+p[0], +p[1] - 1, +p[2]); }
+  function iso(t) { return new Date(t).toISOString().slice(0, 10); }
+  function esc(s) { var x = document.createElement('div'); x.textContent = s; return x.innerHTML; }
+  function rowById(id) { return rows.filter(function (r) { return r.id == id; })[0]; }
+
+  var all = [d(TODAY)];
+  rows.forEach(function (r) { all.push(d(r.start), d(r.end)); if (r.baseline) all.push(d(r.baseline.start), d(r.baseline.end)); });
+  miles.forEach(function (m) { all.push(d(m.date)); });
+  var min = Math.min.apply(null, all) - 7 * DAY, max = Math.max.apply(null, all) + 14 * DAY;
+  var days = Math.round((max - min) / DAY) + 1;
+
+  var groups = [], gi = {};
+  function grp(id, name, entity) {
+    if (!(id in gi)) { gi[id] = groups.length; groups.push({ id: id, name: name, entity: entity, items: [], ms: [] }); }
+    return groups[gi[id]];
+  }
+  rows.forEach(function (r) { grp(r.board_id, r.board, r.entity).items.push(r); });
+  miles.forEach(function (m) { grp(m.board_id, m.board, m.entity).ms.push(m); });
+  groups.sort(function (a, b) { return a.name < b.name ? -1 : 1; });
+
+  function render() {
+    localStorage.setItem('gantt-dw', dw);
+    var W = days * dw, left = '', track = '', i, months = '', daysRow = '', cur = null, span = 0, bg = '';
+    for (i = 0; i < days; i++) {
+      var t = new Date(min + i * DAY), key = t.getUTCFullYear() + '-' + t.getUTCMonth(), wd = t.getUTCDay();
+      if (key !== cur) {
+        if (cur !== null) months += '<div style="width:' + span * dw + 'px">' + lbl + '</div>';
+        cur = key; span = 0;
+        lbl = t.toLocaleString('en', { month: 'short', year: 'numeric', timeZone: 'UTC' });
+      }
+      span++;
+      var we = (wd === 0 || wd === 6) ? 'we' : '';
+      daysRow += '<div class="' + we + '" style="width:' + dw + 'px">' + (dw >= 12 ? t.getUTCDate() : '') + '</div>';
+      bg += '<div class="g-cell ' + we + '" style="width:' + dw + 'px"></div>';
+    }
+    months += '<div style="width:' + span * dw + 'px">' + lbl + '</div>';
+    bg = '<div class="g-bg">' + bg + '</div>';
+
+    var pos = {}, rowIdx = 0;
+    groups.forEach(function (g) {
+      left += '<div class="g-row group" title="' + esc(g.entity) + '">' + esc(g.name) + (g.entity ? ' &middot; ' + esc(g.entity) : '') + '</div>';
+      var ms = '';
+      g.ms.forEach(function (m) {
+        var mx = (d(m.date) - min) / DAY * dw + dw / 2 - 10;
+        ms += '<div class="g-ms' + (m.done ? ' done' : '') + '" data-ms="' + m.id + '" style="left:' + mx + 'px" title="' + esc(m.title + ' - ' + m.date) + '"></div>' +
+              '<div class="g-mslbl" style="left:' + (mx + 22) + 'px">' + esc(m.title) + '</div>';
+      });
+      track += '<div class="g-track group">' + bg + ms + '</div>';
+      rowIdx++;
+      g.items.forEach(function (r) {
+        left += '<div class="g-row"><a href="' + r.url + '" title="' + esc(r.title + ' (' + r.column + ')') + '">' + esc(r.title) + '</a></div>';
+        var x = (d(r.start) - min) / DAY * dw, w = ((d(r.end) - d(r.start)) / DAY + 1) * dw;
+        pos[r.id] = { x: x, w: w, y: rowIdx * RH + 15 };
+        var tip = r.title + '\n' + r.start + ' → ' + r.end + '\n' + r.column + (r.assignees.length ? '\n' + r.assignees.join(', ') : '');
+        var base = '';
+        if (r.baseline) {
+          var bx = (d(r.baseline.start) - min) / DAY * dw, bw = ((d(r.baseline.end) - d(r.baseline.start)) / DAY + 1) * dw;
+          base = '<div class="g-base" style="left:' + bx + 'px;width:' + bw + 'px" title="Baseline ' + r.baseline.start + ' → ' + r.baseline.end + '"></div>';
+        }
+        track += '<div class="g-track">' + bg + base +
+          '<div class="g-bar' + (r.completed ? ' done' : '') + (r.overdue ? ' overdue' : '') + (linkMode ? ' linking' : '') + (picked == r.id ? ' pick' : '') + '" data-id="' + r.id + '" style="left:' + x + 'px;width:' + w + 'px;background:' + r.color + '" title="' + esc(tip) + '">' +
+          '<div class="g-prog" style="width:' + r.progress + '%"></div><div class="g-h l"></div><span>' + esc(r.title) + '</span><div class="g-h r"></div></div></div>';
+        rowIdx++;
+      });
+    });
+
+    var paths = '';
+    deps.forEach(function (dp) {
+      var a = pos[dp.from], b = pos[dp.to];
+      if (!a || !b) return;
+      var x1 = a.x + a.w, y1 = a.y, x2 = b.x, y2 = b.y, p;
+      if (x2 >= x1 + 14) {
+        p = 'M' + x1 + ',' + y1 + ' H' + (x1 + 7) + ' V' + y2 + ' H' + (x2 - 1);
+      } else {
+        var ym = y2 > y1 ? y1 + RH / 2 : y1 - RH / 2;
+        p = 'M' + x1 + ',' + y1 + ' H' + (x1 + 7) + ' V' + ym + ' H' + (x2 - 8) + ' V' + y2 + ' H' + (x2 - 1);
+      }
+      var bad = d(rowById(dp.to).start) <= d(rowById(dp.from).end);
+      paths += '<path class="arrow' + (bad ? ' bad' : '') + '" d="' + p + '" marker-end="url(#g-arr' + (bad ? 'b' : '') + ')"/>' +
+               '<path class="hit" data-dep="' + dp.id + '" d="' + p + '"><title>Click to remove dependency</title></path>';
+    });
+    var svg = '<svg class="g-svg" width="' + W + '" height="' + rowIdx * RH + '">' +
+      '<defs><marker id="g-arr" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#64748b"/></marker>' +
+      '<marker id="g-arrb" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#dc2626"/></marker></defs>' + paths + '</svg>';
+
+    var tx = (d(TODAY) - min) / DAY * dw + dw / 2;
+    grid.innerHTML =
+      '<div class="g-left g-head"><div class="g-row" style="height:50px;font-weight:700">Task</div></div>' +
+      '<div class="g-head" style="width:' + W + 'px"><div class="g-months">' + months + '</div><div class="g-days">' + daysRow + '</div></div>' +
+      '<div class="g-left">' + left + '</div>' +
+      '<div class="g-body" style="width:' + W + 'px">' + track + svg + '<div class="g-line" style="left:' + tx + 'px"></div></div>';
+    bind();
+  }
+
+  function dragger(el, onDone, fixed) {
+    el.addEventListener('mousedown', function (e) {
+      if (e.button !== 0) return;
+      var mode = e.target.classList.contains('l') ? 'l' : e.target.classList.contains('r') ? 'r' : 'm';
+      if (fixed) mode = 'm';
+      var sx = e.clientX, ol = parseFloat(el.style.left), ow = parseFloat(el.style.width), moved = false;
+      e.preventDefault();
+      function mv(ev) {
+        var dx = Math.round((ev.clientX - sx) / dw) * dw;
+        if (Math.abs(ev.clientX - sx) > 3) moved = true;
+        if (mode === 'm') el.style.left = (ol + dx) + 'px';
+        else if (mode === 'l') { var nw = ow - dx; if (nw >= dw) { el.style.left = (ol + dx) + 'px'; el.style.width = nw + 'px'; } }
+        else { var nw2 = ow + dx; if (nw2 >= dw) el.style.width = nw2 + 'px'; }
+      }
+      function up() {
+        document.removeEventListener('mousemove', mv); document.removeEventListener('mouseup', up);
+        onDone(moved, el);
+      }
+      document.addEventListener('mousemove', mv); document.addEventListener('mouseup', up);
+    });
+  }
+
+  function bind() {
+    grid.querySelectorAll('.g-bar').forEach(function (bar) {
+      var id = bar.dataset.id;
+      if (linkMode) {
+        bar.addEventListener('click', function () {
+          if (!picked) { picked = id; render(); return; }
+          if (picked == id) { picked = null; render(); return; }
+          var from = picked; picked = null;
+          post(URLS.depAdd, { from: from, to: id }).then(function (j) { if (j.ok) location.reload(); else { fail(j); render(); } });
+        });
+        return;
+      }
+      dragger(bar, function (moved, el) {
+        var r = rowById(id);
+        if (!moved) { window.location = r.url; return; }
+        var s0 = Math.round(parseFloat(el.style.left) / dw), n = Math.round(parseFloat(el.style.width) / dw);
+        var s = iso(min + s0 * DAY), en = iso(min + (s0 + n - 1) * DAY);
+        post(u('dates', id), { start: s, end: en }).then(function (j) {
+          if (!j.ok) { fail(j); location.reload(); return; }
+          r.start = s; r.end = en; r.overdue = !r.completed && d(en) < d(TODAY);
+          render();
+        }).catch(function () { alert('Failed to save'); location.reload(); });
+      }, false);
+    });
+
+    grid.querySelectorAll('.g-ms').forEach(function (el) {
+      var id = el.dataset.ms;
+      el.addEventListener('contextmenu', function (e) {
+        e.preventDefault();
+        if (confirm('Delete this milestone?')) post(u('msDel', id), {}).then(reloadOrFail);
+      });
+      dragger(el, function (moved, node) {
+        if (!moved) { post(u('msToggle', id), {}).then(reloadOrFail); return; }
+        var day = Math.round((parseFloat(node.style.left) + 10 - dw / 2) / dw);
+        post(u('msMove', id), { date: iso(min + day * DAY) }).then(function (j) { if (!j.ok) fail(j); location.reload(); });
+      }, true);
+    });
+
+    grid.querySelectorAll('.hit').forEach(function (p) {
+      p.addEventListener('click', function () {
+        if (confirm('Remove this dependency?')) post(u('depDel', p.dataset.dep), {}).then(reloadOrFail);
+      });
+    });
+  }
+
+  function scrollToday() {
+    var sc = document.getElementById('g-scroll');
+    sc.scrollLeft = Math.max(0, (d(TODAY) - min) / DAY * dw - 150);
+  }
+  document.querySelectorAll('[data-zoom]').forEach(function (b) {
+    b.addEventListener('click', function () { dw = parseFloat(b.dataset.zoom); render(); scrollToday(); });
+  });
+  document.getElementById('g-today').addEventListener('click', scrollToday);
+  document.getElementById('g-link').addEventListener('click', function () {
+    linkMode = !linkMode; picked = null;
+    this.classList.toggle('active', linkMode);
+    this.innerHTML = linkMode ? '<i class="fas fa-link me-1"></i>Linking... (click 2 tasks)' : '<i class="fas fa-link me-1"></i>Link tasks';
+    render();
+  });
+  render(); scrollToday();
+})();
+</script>
+{% endblock %}

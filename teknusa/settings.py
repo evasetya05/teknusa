@@ -58,6 +58,7 @@ INSTALLED_APPS = [
     'ledger',
     'post_media',
     'kanban',
+    'gantt',
     'agent',
     'apps.game.apps.GameConfig',
 
