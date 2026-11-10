@@ -4,12 +4,13 @@
 <style>
 .g-wrap { background:#fff; border:1px solid #dee2e6; border-radius:.5rem; overflow:hidden; }
 .g-scroll { overflow:auto; max-height:70vh; position:relative; }
-.g-grid { display:grid; grid-template-columns:260px 1fr; min-width:max-content; }
+.g-grid { display:grid; grid-template-columns:280px 1fr; min-width:max-content; }
 .g-left { position:sticky; left:0; z-index:6; background:#fff; border-right:1px solid #dee2e6; }
 .g-head { position:sticky; top:0; z-index:7; background:#f8f9fa; }
 .g-left.g-head { z-index:8; }
 .g-row { height:34px; display:flex; align-items:center; padding:0 .6rem; border-bottom:1px solid #eef0f2; font-size:.82rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .g-row.group { background:#f1f5f9; font-weight:700; font-size:.78rem; text-transform:uppercase; letter-spacing:.04em; color:#475569; }
+.g-row.entity-banner { background:#0f172a; color:#38bdf8; font-weight:700; font-size:0.75rem; letter-spacing:0.06em; text-transform:uppercase; }
 .g-row a { color:#212529; text-decoration:none; overflow:hidden; text-overflow:ellipsis; }
 .g-row a:hover { color:#0d6efd; }
 .g-months, .g-days { display:flex; }
@@ -20,6 +21,7 @@
 .g-line { position:absolute; top:0; bottom:0; width:2px; background:#ef4444; z-index:2; pointer-events:none; }
 .g-track { height:34px; border-bottom:1px solid #eef0f2; position:relative; }
 .g-track.group { background:#f1f5f9; }
+.g-track.entity-banner { background:#0f172a; border-bottom:1px solid #1e293b; }
 .g-bg { position:absolute; inset:0; display:flex; pointer-events:none; }
 .g-cell { border-right:1px solid #f1f3f5; flex:none; }
 .g-bar { position:absolute; top:5px; height:20px; border-radius:5px; color:#fff; font-size:.7rem; line-height:20px; padding:0 .4rem; cursor:grab; overflow:hidden; white-space:nowrap; box-shadow:0 1px 3px rgba(0,0,0,.2); user-select:none; z-index:3; }
@@ -45,67 +47,147 @@
 
 <div class="container-fluid mt-5 pt-3">
   <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-    <h4 class="mb-0"><i class="fas fa-stream text-primary me-2"></i>Gantt Chart</h4>
-    <form method="get" class="d-flex flex-wrap gap-2 align-items-center">
-      <select name="board" id="g-board" class="form-select form-select-sm" style="width:auto" onchange="this.form.submit()">
-        <option value="">All boards</option>
-        {% for b in boards %}<option value="{{ b.pk }}" {% if selected_board and selected_board.pk == b.pk %}selected{% endif %}>{{ b.name }}{% if b.entity %} - {{ b.entity.name }}{% endif %}</option>{% endfor %}
-      </select>
-      <div class="form-check form-switch mb-0">
+    <div>
+      <h4 class="mb-0"><i class="fas fa-stream text-primary me-2"></i>Gantt Chart</h4>
+    </div>
+
+    <!-- Filter Toolbar -->
+    <form method="get" id="gantt-filter-form" class="d-flex flex-wrap gap-2 align-items-center">
+      <!-- 1. Filter Perusahaan (PT) -->
+      <div class="input-group input-group-sm" style="width: auto;">
+        <span class="input-group-text bg-light fw-bold text-secondary" title="Pilih Perusahaan (PT)">
+          <i class="fas fa-building text-primary me-1"></i>PT
+        </span>
+        <select name="entity" id="g-entity" class="form-select form-select-sm" style="min-width: 175px;" onchange="onEntityChange(this.value)">
+          <option value="all" {% if selected_entity_id == 'all' %}selected{% endif %}>🌐 Semua Perusahaan</option>
+          {% for ent in all_entities %}
+            <option value="{{ ent.id }}" {% if selected_entity_id == ent.id|stringformat:"s" %}selected{% endif %}>
+              {{ ent.name }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- 2. Filter Board -->
+      <div class="input-group input-group-sm" style="width: auto;">
+        <span class="input-group-text bg-light fw-bold text-secondary" title="Pilih Board Kanban">
+          <i class="fas fa-columns text-info me-1"></i>Board
+        </span>
+        <select name="board" id="g-board" class="form-select form-select-sm" style="min-width: 150px;" onchange="this.form.submit()">
+          <option value="">Semua Board</option>
+          {% for b in boards %}
+            <option value="{{ b.pk }}" {% if selected_board and selected_board.pk == b.pk %}selected{% endif %}>
+              {{ b.name }}{% if is_all_entities and b.entity %} ({{ b.entity.name }}){% endif %}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- 3. Toggle Selesai -->
+      <div class="form-check form-switch mb-0 ms-1">
         <input class="form-check-input" type="checkbox" name="done" value="1" id="gdone" {% if show_done %}checked{% endif %} onchange="this.form.submit()">
-        <label class="form-check-label small" for="gdone">Show completed</label>
+        <label class="form-check-label small" for="gdone">Selesai</label>
       </div>
+
+      <!-- 4. Zoom Buttons -->
       <div class="btn-group btn-group-sm">
-        <button type="button" class="btn btn-outline-secondary" data-zoom="14">Day</button>
-        <button type="button" class="btn btn-outline-secondary" data-zoom="6">Week</button>
-        <button type="button" class="btn btn-outline-secondary" data-zoom="2.5">Month</button>
+        <button type="button" class="btn btn-outline-secondary" data-zoom="14">Hari</button>
+        <button type="button" class="btn btn-outline-secondary" data-zoom="6">Minggu</button>
+        <button type="button" class="btn btn-outline-secondary" data-zoom="2.5">Bulan</button>
       </div>
-      <button type="button" class="btn btn-sm btn-outline-primary" id="g-today">Today</button>
-      <button type="button" class="btn btn-sm btn-outline-success" id="g-link"><i class="fas fa-link me-1"></i>Link tasks</button>
+
+      <!-- 5. Actions -->
+      <button type="button" class="btn btn-sm btn-outline-primary" id="g-today">Hari Ini</button>
+      <button type="button" class="btn btn-sm btn-outline-success" id="g-link"><i class="fas fa-link me-1"></i>Link Task</button>
       <button type="button" class="btn btn-sm btn-outline-secondary" id="g-msbtn"><i class="fas fa-gem me-1"></i>Milestone</button>
+
       <div class="btn-group btn-group-sm">
-        <button type="button" class="btn btn-outline-dark dropdown-toggle" id="g-blbtn"><i class="fas fa-flag-checkered me-1"></i>Baseline</button>
+        <button type="button" class="btn btn-outline-dark dropdown-toggle" id="g-blbtn">
+          <i class="fas fa-flag-checkered me-1"></i>Baseline
+        </button>
         <ul class="dropdown-menu" id="g-blmenu">
-          <li><a class="dropdown-item" href="#" data-bl="set">Set baseline (new tasks only)</a></li>
-          <li><a class="dropdown-item" href="#" data-bl="overwrite">Reset baseline to current dates</a></li>
+          <li><a class="dropdown-item" href="#" data-bl="set">Simpan baseline (task baru saja)</a></li>
+          <li><a class="dropdown-item" href="#" data-bl="overwrite">Reset baseline ke tanggal saat ini</a></li>
           <li><hr class="dropdown-divider"></li>
-          <li><a class="dropdown-item text-danger" href="#" data-bl="clear">Clear baseline</a></li>
+          <li><a class="dropdown-item text-danger" href="#" data-bl="clear">Hapus baseline</a></li>
         </ul>
       </div>
     </form>
   </div>
 
-  <div id="g-msform" class="card card-body py-2 mb-3">
+  <!-- Form Tambah Milestone -->
+  <div id="g-msform" class="card card-body py-2 mb-3 bg-light border">
     <div class="row g-2 align-items-end">
-      <div class="col-md-3"><label class="form-label small mb-0">Board</label>
+      <div class="col-md-3">
+        <label class="form-label small mb-0 fw-bold">Board Tujuan</label>
         <select id="ms-board" class="form-select form-select-sm">
-          {% for b in boards %}<option value="{{ b.pk }}" {% if selected_board and selected_board.pk == b.pk %}selected{% endif %}>{{ b.name }}{% if b.entity %} - {{ b.entity.name }}{% endif %}</option>{% endfor %}
-        </select></div>
-      <div class="col-md-4"><label class="form-label small mb-0">Title</label><input id="ms-title" class="form-control form-control-sm" maxlength="200" placeholder="e.g. Go-live"></div>
-      <div class="col-md-3"><label class="form-label small mb-0">Date</label><input id="ms-date" type="date" class="form-control form-control-sm" value="{{ today }}"></div>
-      <div class="col-md-2 d-flex gap-1"><button type="button" id="ms-save" class="btn btn-sm btn-primary">Add</button><button type="button" id="ms-cancel" class="btn btn-sm btn-outline-secondary">Cancel</button></div>
+          {% for b in boards %}
+            <option value="{{ b.pk }}" {% if selected_board and selected_board.pk == b.pk %}selected{% endif %}>
+              {{ b.name }}{% if b.entity %} - {{ b.entity.name }}{% endif %}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-4">
+        <label class="form-label small mb-0 fw-bold">Judul Milestone</label>
+        <input id="ms-title" class="form-control form-control-sm" maxlength="200" placeholder="Contoh: Go-live / Serah Terima">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label small mb-0 fw-bold">Target Tanggal</label>
+        <input id="ms-date" type="date" class="form-control form-control-sm" value="{{ today }}">
+      </div>
+      <div class="col-md-2 d-flex gap-1">
+        <button type="button" id="ms-save" class="btn btn-sm btn-primary">Tambah</button>
+        <button type="button" id="ms-cancel" class="btn btn-sm btn-outline-secondary">Batal</button>
+      </div>
     </div>
   </div>
 
-  <div class="small text-muted g-leg mb-2">
-    {{ task_count }} task(s), {{ milestone_count }} milestone(s).
-    Drag bars to move, edges to resize. <b>Link tasks</b>: click predecessor then successor; click an arrow to remove it (red dashed = schedule conflict).
-    Milestone: click = done/undone, drag = move, right-click = delete. Thin dark line = baseline.
-    <i style="background:#94a3b8"></i>Low<i style="background:#3b82f6"></i>Medium<i style="background:#f59e0b"></i>High<i style="background:#ef4444"></i>Urgent
-    {% if no_date_count %}<span class="badge bg-warning text-dark ms-3">{{ no_date_count }} task(s) without dates are hidden</span>{% endif %}
+  <!-- Legend & Status Bar -->
+  <div class="small text-muted g-leg mb-2 d-flex flex-wrap align-items-center">
+    <span class="me-2">
+      {% if current_entity_obj %}
+        <span class="badge bg-primary text-white"><i class="fas fa-building me-1"></i>{{ current_entity_obj.name }}</span>
+      {% else %}
+        <span class="badge bg-dark text-white"><i class="fas fa-globe me-1"></i>Semua Perusahaan</span>
+      {% endif %}
+    </span>
+    <span><strong>{{ task_count }}</strong> task, <strong>{{ milestone_count }}</strong> milestone.</span>
+    <span class="ms-3 d-none d-md-inline">Prioritas:</span>
+    <i style="background:#94a3b8"></i>Low
+    <i style="background:#3b82f6"></i>Medium
+    <i style="background:#f59e0b"></i>High
+    <i style="background:#ef4444"></i>Urgent
+    <span class="ms-3"><span style="border-bottom: 2px solid #ef4444; display: inline-block; width: 14px; margin-right: 4px;"></span> Garis merah: Hari ini</span>
+    {% if no_date_count %}
+      <span class="badge bg-warning text-dark ms-3">{{ no_date_count }} task tanpa tanggal disembunyikan</span>
+    {% endif %}
   </div>
 
+  <!-- Gantt Chart Container -->
   <div class="g-wrap">
     {% if task_count or milestone_count %}
-    <div class="g-scroll" id="g-scroll"><div class="g-grid" id="g-grid"></div></div>
+      <div class="g-scroll" id="g-scroll">
+        <div class="g-grid" id="g-grid"></div>
+      </div>
     {% else %}
-    <div class="text-center text-muted py-5"><i class="fas fa-stream fa-2x mb-2"></i><div>No tasks with start/due dates and no milestones yet. Set dates on kanban tasks or add a milestone.</div></div>
+      <div class="text-center text-muted py-5">
+        <i class="fas fa-stream fa-2x mb-2 text-secondary"></i>
+        <div class="fw-bold">Tidak ada task dengan rentang tanggal atau milestone pada filter ini.</div>
+        <small>Silakan pilih perusahaan/board lain atau tambahkan tanggal mulai &amp; jatuh tempo pada task Kanban.</small>
+      </div>
     {% endif %}
   </div>
 </div>
 
 {{ data_json|json_script:"g-data" }}
 <script>
+function onEntityChange(val) {
+  var b = document.getElementById('g-board');
+  if (b) b.value = ''; // Reset board when switching company
+  document.getElementById('gantt-filter-form').submit();
+}
+
 (function () {
   var URLS = {
     dates: "{% url 'gantt:update_dates' 0 %}", depAdd: "{% url 'gantt:dependency_add' %}",
@@ -121,31 +203,55 @@
     Object.keys(obj || {}).forEach(function (k) { fd.append(k, obj[k]); });
     return fetch(url, { method: 'POST', headers: { 'X-CSRFToken': csrf() }, body: fd }).then(function (r) { return r.json(); });
   }
-  function fail(j) { alert((j && j.error) || 'Failed.'); }
+  function fail(j) { alert((j && j.error) || 'Gagal menyimpan.'); }
   function reloadOrFail(j) { if (j.ok) location.reload(); else fail(j); }
 
-  // ---- toolbar (works even with an empty chart) ----
+  // Toolbar toggles
   var msForm = document.getElementById('g-msform');
-  document.getElementById('g-msbtn').addEventListener('click', function () { msForm.style.display = msForm.style.display === 'block' ? 'none' : 'block'; });
-  document.getElementById('ms-cancel').addEventListener('click', function () { msForm.style.display = 'none'; });
-  document.getElementById('ms-save').addEventListener('click', function () {
-    post(URLS.msAdd, { board: document.getElementById('ms-board').value, title: document.getElementById('ms-title').value, date: document.getElementById('ms-date').value }).then(reloadOrFail);
-  });
+  var msBtn = document.getElementById('g-msbtn');
+  if (msBtn && msForm) {
+    msBtn.addEventListener('click', function () {
+      msForm.style.display = (msForm.style.display === 'block') ? 'none' : 'block';
+    });
+  }
+  var msCancel = document.getElementById('ms-cancel');
+  if (msCancel && msForm) {
+    msCancel.addEventListener('click', function () { msForm.style.display = 'none'; });
+  }
+  var msSave = document.getElementById('ms-save');
+  if (msSave) {
+    msSave.addEventListener('click', function () {
+      var boardId = document.getElementById('ms-board').value;
+      var title = document.getElementById('ms-title').value.trim();
+      var dateVal = document.getElementById('ms-date').value;
+      if (!title) { alert('Silakan isi judul milestone.'); return; }
+      post(URLS.msAdd, { board: boardId, title: title, date: dateVal }).then(reloadOrFail);
+    });
+  }
+
+  // Baseline dropdown
   var blMenu = document.getElementById('g-blmenu');
-  document.getElementById('g-blbtn').addEventListener('click', function (e) { e.stopPropagation(); blMenu.classList.toggle('show'); });
-  document.addEventListener('click', function () { blMenu.classList.remove('show'); });
-  var boardSel = document.getElementById('g-board').value;
+  var blBtn = document.getElementById('g-blbtn');
+  if (blBtn && blMenu) {
+    blBtn.addEventListener('click', function (e) { e.stopPropagation(); blMenu.classList.toggle('show'); });
+    document.addEventListener('click', function () { blMenu.classList.remove('show'); });
+  }
+  var boardSel = document.getElementById('g-board') ? document.getElementById('g-board').value : '';
   document.querySelectorAll('[data-bl]').forEach(function (a) {
     a.addEventListener('click', function (e) {
       e.preventDefault();
-      var mode = a.dataset.bl, scope = boardSel ? 'the selected board' : 'all visible boards';
+      var mode = a.dataset.bl;
+      var scope = boardSel ? 'board terpilih' : 'seluruh tampilan saat ini';
       if (mode === 'clear') {
-        if (!confirm('Clear baselines for ' + scope + '?')) return;
+        if (!confirm('Hapus baseline untuk ' + scope + '?')) return;
         post(URLS.blClear, { board: boardSel }).then(reloadOrFail);
       } else {
-        if (mode === 'overwrite' && !confirm('Replace existing baselines with current dates for ' + scope + '?')) return;
+        if (mode === 'overwrite' && !confirm('Ganti baseline yang ada dengan tanggal saat ini untuk ' + scope + '?')) return;
         post(URLS.blSet, { board: boardSel, overwrite: mode === 'overwrite' ? '1' : '0' })
-          .then(function (j) { if (j.ok) { alert(j.count + ' task(s) baselined.'); location.reload(); } else fail(j); });
+          .then(function (j) {
+            if (j.ok) { alert(j.count + ' task berhasil disimpan baseline-nya.'); location.reload(); }
+            else fail(j);
+          });
       }
     });
   });
@@ -153,29 +259,43 @@
   var grid = document.getElementById('g-grid');
   if (!grid) return;
   var DATA = JSON.parse(JSON.parse(document.getElementById('g-data').textContent));
-  var rows = DATA.rows, deps = DATA.deps, miles = DATA.milestones;
+  var rows = DATA.rows, deps = DATA.deps, miles = DATA.milestones, isAllEntities = DATA.is_all_entities;
   var DAY = 86400000, TODAY = "{{ today }}", RH = 34;
   var dw = parseFloat(localStorage.getItem('gantt-dw') || '14');
   var linkMode = false, picked = null, lbl;
+
   function d(s) { var p = s.split('-'); return Date.UTC(+p[0], +p[1] - 1, +p[2]); }
   function iso(t) { return new Date(t).toISOString().slice(0, 10); }
   function esc(s) { var x = document.createElement('div'); x.textContent = s; return x.innerHTML; }
   function rowById(id) { return rows.filter(function (r) { return r.id == id; })[0]; }
 
   var all = [d(TODAY)];
-  rows.forEach(function (r) { all.push(d(r.start), d(r.end)); if (r.baseline) all.push(d(r.baseline.start), d(r.baseline.end)); });
+  rows.forEach(function (r) {
+    all.push(d(r.start), d(r.end));
+    if (r.baseline) all.push(d(r.baseline.start), d(r.baseline.end));
+  });
   miles.forEach(function (m) { all.push(d(m.date)); });
   var min = Math.min.apply(null, all) - 7 * DAY, max = Math.max.apply(null, all) + 14 * DAY;
   var days = Math.round((max - min) / DAY) + 1;
 
+  // Grouping by Board & Entity
   var groups = [], gi = {};
   function grp(id, name, entity) {
-    if (!(id in gi)) { gi[id] = groups.length; groups.push({ id: id, name: name, entity: entity, items: [], ms: [] }); }
+    if (!(id in gi)) {
+      gi[id] = groups.length;
+      groups.push({ id: id, name: name, entity: entity || "Umum (Tanpa PT)", items: [], ms: [] });
+    }
     return groups[gi[id]];
   }
   rows.forEach(function (r) { grp(r.board_id, r.board, r.entity).items.push(r); });
   miles.forEach(function (m) { grp(m.board_id, m.board, m.entity).ms.push(m); });
-  groups.sort(function (a, b) { return a.name < b.name ? -1 : 1; });
+
+  // When viewing all companies, sort groups by Entity first, then Board name
+  groups.sort(function (a, b) {
+    var ea = (a.entity || "").toLowerCase(), eb = (b.entity || "").toLowerCase();
+    if (ea !== eb) return ea.localeCompare(eb);
+    return a.name.toLowerCase().localeCompare(b.name.toLowerCase());
+  });
 
   function render() {
     localStorage.setItem('gantt-dw', dw);
@@ -185,7 +305,7 @@
       if (key !== cur) {
         if (cur !== null) months += '<div style="width:' + span * dw + 'px">' + lbl + '</div>';
         cur = key; span = 0;
-        lbl = t.toLocaleString('en', { month: 'short', year: 'numeric', timeZone: 'UTC' });
+        lbl = t.toLocaleString('id-ID', { month: 'short', year: 'numeric', timeZone: 'UTC' });
       }
       span++;
       var we = (wd === 0 || wd === 6) ? 'we' : '';
@@ -195,9 +315,23 @@
     months += '<div style="width:' + span * dw + 'px">' + lbl + '</div>';
     bg = '<div class="g-bg">' + bg + '</div>';
 
-    var pos = {}, rowIdx = 0;
+    var pos = {}, rowIdx = 0, lastEntity = null;
     groups.forEach(function (g) {
-      left += '<div class="g-row group" title="' + esc(g.entity) + '">' + esc(g.name) + (g.entity ? ' &middot; ' + esc(g.entity) : '') + '</div>';
+      // If viewing all companies, print a clear company header banner when entity changes!
+      if (isAllEntities && g.entity !== lastEntity) {
+        lastEntity = g.entity;
+        left += '<div class="g-row entity-banner">' +
+                '<i class="fas fa-building text-info me-2"></i>' + esc(g.entity) +
+                '</div>';
+        track += '<div class="g-track entity-banner">' + bg + '</div>';
+        rowIdx++;
+      }
+
+      // Board header row
+      left += '<div class="g-row group" title="' + esc(g.entity) + '">' +
+              '<i class="fas fa-columns text-primary me-2"></i>' + esc(g.name) +
+              (!isAllEntities && g.entity ? ' <small class="text-muted ms-1">(' + esc(g.entity) + ')</small>' : '') +
+              '</div>';
       var ms = '';
       g.ms.forEach(function (m) {
         var mx = (d(m.date) - min) / DAY * dw + dw / 2 - 10;
@@ -206,15 +340,17 @@
       });
       track += '<div class="g-track group">' + bg + ms + '</div>';
       rowIdx++;
+
+      // Task rows
       g.items.forEach(function (r) {
-        left += '<div class="g-row"><a href="' + r.url + '" title="' + esc(r.title + ' (' + r.column + ')') + '">' + esc(r.title) + '</a></div>';
+        left += '<div class="g-row ps-3"><a href="' + r.url + '" title="' + esc(r.title + ' (' + r.column + ')') + '">' + esc(r.title) + '</a></div>';
         var x = (d(r.start) - min) / DAY * dw, w = ((d(r.end) - d(r.start)) / DAY + 1) * dw;
         pos[r.id] = { x: x, w: w, y: rowIdx * RH + 15 };
-        var tip = r.title + '\n' + r.start + ' → ' + r.end + '\n' + r.column + (r.assignees.length ? '\n' + r.assignees.join(', ') : '');
+        var tip = r.title + '\nPerusahaan: ' + r.entity + '\nBoard: ' + r.board + '\n' + r.start + ' → ' + r.end + '\nKolom: ' + r.column + (r.assignees.length ? '\nAssignee: ' + r.assignees.join(', ') : '');
         var base = '';
         if (r.baseline) {
           var bx = (d(r.baseline.start) - min) / DAY * dw, bw = ((d(r.baseline.end) - d(r.baseline.start)) / DAY + 1) * dw;
-          base = '<div class="g-base" style="left:' + bx + 'px;width:' + bw + 'px" title="Baseline ' + r.baseline.start + ' → ' + r.baseline.end + '"></div>';
+          base = '<div class="g-base" style="left:' + bx + 'px;width:' + bw + 'px" title="Baseline: ' + r.baseline.start + ' → ' + r.baseline.end + '"></div>';
         }
         track += '<div class="g-track">' + bg + base +
           '<div class="g-bar' + (r.completed ? ' done' : '') + (r.overdue ? ' overdue' : '') + (linkMode ? ' linking' : '') + (picked == r.id ? ' pick' : '') + '" data-id="' + r.id + '" style="left:' + x + 'px;width:' + w + 'px;background:' + r.color + '" title="' + esc(tip) + '">' +
@@ -223,6 +359,7 @@
       });
     });
 
+    // Dependency arrows
     var paths = '';
     deps.forEach(function (dp) {
       var a = pos[dp.from], b = pos[dp.to];
@@ -236,7 +373,7 @@
       }
       var bad = d(rowById(dp.to).start) <= d(rowById(dp.from).end);
       paths += '<path class="arrow' + (bad ? ' bad' : '') + '" d="' + p + '" marker-end="url(#g-arr' + (bad ? 'b' : '') + ')"/>' +
-               '<path class="hit" data-dep="' + dp.id + '" d="' + p + '"><title>Click to remove dependency</title></path>';
+               '<path class="hit" data-dep="' + dp.id + '" d="' + p + '"><title>Klik untuk menghapus dependensi</title></path>';
     });
     var svg = '<svg class="g-svg" width="' + W + '" height="' + rowIdx * RH + '">' +
       '<defs><marker id="g-arr" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#64748b"/></marker>' +
@@ -244,7 +381,7 @@
 
     var tx = (d(TODAY) - min) / DAY * dw + dw / 2;
     grid.innerHTML =
-      '<div class="g-left g-head"><div class="g-row" style="height:50px;font-weight:700">Task</div></div>' +
+      '<div class="g-left g-head"><div class="g-row" style="height:50px;font-weight:700">Task &amp; Board</div></div>' +
       '<div class="g-head" style="width:' + W + 'px"><div class="g-months">' + months + '</div><div class="g-days">' + daysRow + '</div></div>' +
       '<div class="g-left">' + left + '</div>' +
       '<div class="g-body" style="width:' + W + 'px">' + track + svg + '<div class="g-line" style="left:' + tx + 'px"></div></div>';
@@ -294,7 +431,7 @@
           if (!j.ok) { fail(j); location.reload(); return; }
           r.start = s; r.end = en; r.overdue = !r.completed && d(en) < d(TODAY);
           render();
-        }).catch(function () { alert('Failed to save'); location.reload(); });
+        }).catch(function () { alert('Gagal menyimpan.'); location.reload(); });
       }, false);
     });
 
@@ -302,7 +439,7 @@
       var id = el.dataset.ms;
       el.addEventListener('contextmenu', function (e) {
         e.preventDefault();
-        if (confirm('Delete this milestone?')) post(u('msDel', id), {}).then(reloadOrFail);
+        if (confirm('Hapus milestone ini?')) post(u('msDel', id), {}).then(reloadOrFail);
       });
       dragger(el, function (moved, node) {
         if (!moved) { post(u('msToggle', id), {}).then(reloadOrFail); return; }
@@ -313,26 +450,33 @@
 
     grid.querySelectorAll('.hit').forEach(function (p) {
       p.addEventListener('click', function () {
-        if (confirm('Remove this dependency?')) post(u('depDel', p.dataset.dep), {}).then(reloadOrFail);
+        if (confirm('Hapus dependensi ini?')) post(u('depDel', p.dataset.dep), {}).then(reloadOrFail);
       });
     });
   }
 
   function scrollToday() {
     var sc = document.getElementById('g-scroll');
-    sc.scrollLeft = Math.max(0, (d(TODAY) - min) / DAY * dw - 150);
+    if (sc) sc.scrollLeft = Math.max(0, (d(TODAY) - min) / DAY * dw - 150);
   }
   document.querySelectorAll('[data-zoom]').forEach(function (b) {
     b.addEventListener('click', function () { dw = parseFloat(b.dataset.zoom); render(); scrollToday(); });
   });
-  document.getElementById('g-today').addEventListener('click', scrollToday);
-  document.getElementById('g-link').addEventListener('click', function () {
-    linkMode = !linkMode; picked = null;
-    this.classList.toggle('active', linkMode);
-    this.innerHTML = linkMode ? '<i class="fas fa-link me-1"></i>Linking... (click 2 tasks)' : '<i class="fas fa-link me-1"></i>Link tasks';
-    render();
-  });
-  render(); scrollToday();
+  var todayBtn = document.getElementById('g-today');
+  if (todayBtn) todayBtn.addEventListener('click', scrollToday);
+
+  var linkBtn = document.getElementById('g-link');
+  if (linkBtn) {
+    linkBtn.addEventListener('click', function () {
+      linkMode = !linkMode; picked = null;
+      this.classList.toggle('active', linkMode);
+      this.innerHTML = linkMode ? '<i class="fas fa-link me-1"></i>Pilih 2 Task...' : '<i class="fas fa-link me-1"></i>Link Task';
+      render();
+    });
+  }
+
+  render();
+  scrollToday();
 })();
 </script>
 {% endblock %}

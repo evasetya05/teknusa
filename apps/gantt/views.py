@@ -10,6 +10,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from kanban.models import Board, Task
+from entity.models import Entity
 
 from .models import Milestone, TaskBaseline, TaskDependency
 
@@ -21,9 +22,10 @@ PRIORITY_COLORS = {
 }
 
 
-def _visible_boards(request):
+def _visible_boards(request, entity_id=None):
     boards = Board.objects.select_related("entity")
-    entity_id = request.session.get("current_entity_id")
+    if entity_id is None:
+        entity_id = request.GET.get("entity") or request.session.get("current_entity_id")
     if entity_id and entity_id != "all":
         boards = boards.filter(entity_id=entity_id)
     return boards
@@ -48,20 +50,47 @@ def _dates(task):
 @login_required
 def gantt_view(request):
     today = timezone.localdate()
-    boards = _visible_boards(request)
+
+    # 1. Handle Entity (PT) filter
+    all_entities = Entity.objects.filter(is_active=True).order_by("name")
+    entity_param = request.GET.get("entity")
+    if entity_param:
+        selected_entity_id = entity_param
+        # Sync with session so switching in Gantt retains active entity across the ERP
+        request.session["current_entity_id"] = entity_param
+    else:
+        selected_entity_id = request.session.get("current_entity_id", "all")
+
+    current_entity_obj = None
+    if selected_entity_id and selected_entity_id != "all":
+        try:
+            current_entity_obj = Entity.objects.filter(id=selected_entity_id, is_active=True).first()
+            if not current_entity_obj:
+                selected_entity_id = "all"
+        except (ValueError, Exception):
+            selected_entity_id = "all"
+
+    # 2. Boards for selected entity (or all entities)
+    boards_qs = Board.objects.select_related("entity")
+    if selected_entity_id and selected_entity_id != "all":
+        boards_qs = boards_qs.filter(entity_id=selected_entity_id)
+    boards = list(boards_qs.order_by("entity__name", "name"))
+
+    # 3. Selected board filter
     board_id = request.GET.get("board")
-    selected = None
+    selected_board = None
     if board_id and board_id.isdigit():
-        selected = boards.filter(pk=board_id).first()
+        selected_board = next((b for b in boards if b.pk == int(board_id)), None)
+
     show_done = request.GET.get("done") == "1"
-    scope_boards = [selected] if selected else list(boards)
+    scope_boards = [selected_board] if selected_board else boards
 
     tasks = Task.objects.select_related("column__board__entity", "gantt_baseline").prefetch_related("assignees")
     tasks = tasks.filter(column__board__in=scope_boards)
     if not show_done:
         tasks = tasks.filter(completed=False)
     tasks = tasks.exclude(start_date__isnull=True, due_date__isnull=True).order_by(
-        "column__board__name", "start_date", "due_date", "id"
+        "column__board__entity__name", "column__board__name", "start_date", "due_date", "id"
     )
 
     rows = []
@@ -69,12 +98,15 @@ def gantt_view(request):
         start, end = _dates(t)
         stats = t.checklist_stats
         bl = getattr(t, "gantt_baseline", None)
+        entity_name = t.column.board.entity.name if t.column.board.entity else "Umum (Tanpa PT)"
+        entity_id_str = str(t.column.board.entity_id) if t.column.board.entity_id else ""
         rows.append({
             "id": t.pk,
             "title": t.title,
             "board": t.column.board.name,
             "board_id": t.column.board_id,
-            "entity": t.column.board.entity.name if t.column.board.entity else "",
+            "entity": entity_name,
+            "entity_id": entity_id_str,
             "column": t.column.name,
             "start": start.isoformat(),
             "end": end.isoformat(),
@@ -100,7 +132,8 @@ def gantt_view(request):
         {
             "id": m.pk, "title": m.title, "date": m.date.isoformat(), "done": m.is_done,
             "board": m.board.name, "board_id": m.board_id,
-            "entity": m.board.entity.name if m.board.entity else "",
+            "entity": m.board.entity.name if m.board.entity else "Umum (Tanpa PT)",
+            "entity_id": str(m.board.entity_id) if m.board.entity_id else "",
         }
         for m in Milestone.objects.filter(board__in=scope_boards).select_related("board__entity")
     ]
@@ -110,10 +143,19 @@ def gantt_view(request):
         completed=False, start_date__isnull=True, due_date__isnull=True,
     ).count()
 
-    data = {"rows": rows, "deps": deps, "milestones": milestones}
+    data = {
+        "rows": rows,
+        "deps": deps,
+        "milestones": milestones,
+        "is_all_entities": (selected_entity_id == "all"),
+    }
     return render(request, "gantt/gantt.html", {
+        "all_entities": all_entities,
+        "selected_entity_id": str(selected_entity_id),
+        "current_entity_obj": current_entity_obj,
+        "is_all_entities": (selected_entity_id == "all"),
         "boards": boards,
-        "selected_board": selected,
+        "selected_board": selected_board,
         "show_done": show_done,
         "data_json": json.dumps(data),
         "task_count": len(rows),
