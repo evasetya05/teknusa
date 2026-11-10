@@ -22,6 +22,8 @@ class TaskDependency(models.Model):
 class Milestone(models.Model):
     board = models.ForeignKey(
         'kanban.Board', on_delete=models.CASCADE, related_name='milestones')
+    task = models.ForeignKey(
+        'kanban.Task', on_delete=models.CASCADE, null=True, blank=True, related_name='gantt_milestones')
     title = models.CharField(max_length=200)
     date = models.DateField()
     is_done = models.BooleanField(default=False)

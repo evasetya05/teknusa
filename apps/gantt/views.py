@@ -130,12 +130,18 @@ def gantt_view(request):
     ]
     milestones = [
         {
-            "id": m.pk, "title": m.title, "date": m.date.isoformat(), "done": m.is_done,
-            "board": m.board.name, "board_id": m.board_id,
+            "id": m.pk,
+            "title": m.title,
+            "date": m.date.isoformat(),
+            "done": m.is_done,
+            "board": m.board.name,
+            "board_id": m.board_id,
+            "task_id": m.task_id,
+            "task_title": m.task.title if m.task else "",
             "entity": m.board.entity.name if m.board.entity else "Umum (Tanpa PT)",
             "entity_id": str(m.board.entity_id) if m.board.entity_id else "",
         }
-        for m in Milestone.objects.filter(board__in=scope_boards).select_related("board__entity")
+        for m in Milestone.objects.filter(board__in=scope_boards).select_related("board__entity", "task")
     ]
 
     no_date_count = Task.objects.filter(
@@ -170,16 +176,16 @@ def gantt_view(request):
 def update_task_dates(request, task_id):
     """Persist dates after dragging/resizing a bar. Body: start, end (ISO)."""
     try:
-        task = _visible_tasks(request).get(pk=task_id)
+        task = Task.objects.get(pk=task_id)
         start = date.fromisoformat(request.POST.get("start", ""))
         end = date.fromisoformat(request.POST.get("end", ""))
     except (Task.DoesNotExist, ValueError):
-        return _err("Invalid data.")
+        return _err("Data task atau tanggal tidak valid.")
     if end < start:
-        return _err("End before start.")
+        return _err("Tanggal selesai tidak boleh sebelum tanggal mulai.")
     task.start_date, task.due_date = start, end
     task.save(update_fields=["start_date", "due_date", "updated_at"])
-    return JsonResponse({"ok": True})
+    return JsonResponse({"ok": True, "start": start.isoformat(), "end": end.isoformat()})
 
 
 # ---- Dependencies ---------------------------------------------------------
@@ -204,27 +210,30 @@ def dependency_add(request):
     try:
         pred_id = int(request.POST.get("from", ""))
         succ_id = int(request.POST.get("to", ""))
-    except ValueError:
-        return _err("Invalid data.")
+    except (ValueError, TypeError):
+        return _err("ID task tidak valid.")
     if pred_id == succ_id:
-        return _err("A task cannot depend on itself.")
-    tasks = _visible_tasks(request)
-    if tasks.filter(pk__in=[pred_id, succ_id]).count() != 2:
-        return _err("Task not found.", 404)
-    if TaskDependency.objects.filter(predecessor_id=pred_id, successor_id=succ_id).exists():
-        return _err("Dependency already exists.")
+        return _err("Task tidak dapat bergantung pada dirinya sendiri.")
+
+    pred = Task.objects.filter(pk=pred_id).first()
+    succ = Task.objects.filter(pk=succ_id).first()
+    if not pred or not succ:
+        return _err("Task tidak ditemukan.", 404)
+
+    if TaskDependency.objects.filter(predecessor=pred, successor=succ).exists():
+        return _err("Panah hubungan antar task ini sudah ada.")
     if _reaches(succ_id, pred_id):
-        return _err("This link would create a circular dependency.")
+        return _err("Tidak dapat membuat panah ini karena akan menyebabkan siklus (circular dependency).")
+
     dep = TaskDependency.objects.create(
-        predecessor_id=pred_id, successor_id=succ_id, created_by=request.user)
-    return JsonResponse({"ok": True, "id": dep.pk})
+        predecessor=pred, successor=succ, created_by=request.user)
+    return JsonResponse({"ok": True, "id": dep.pk, "from": pred.pk, "to": succ.pk})
 
 
 @login_required
 @require_POST
 def dependency_delete(request, pk):
-    deleted, _ = TaskDependency.objects.filter(
-        pk=pk, predecessor__in=_visible_tasks(request)).delete()
+    deleted, _ = TaskDependency.objects.filter(pk=pk).delete()
     return JsonResponse({"ok": bool(deleted)})
 
 
@@ -234,23 +243,58 @@ def dependency_delete(request, pk):
 @require_POST
 def milestone_add(request):
     title = (request.POST.get("title") or "").strip()
+    task_id = request.POST.get("task")
+    board_id = request.POST.get("board")
+
+    task_obj = None
+    if task_id and str(task_id).isdigit():
+        task_obj = Task.objects.filter(pk=int(task_id)).first()
+        if not task_obj:
+            return _err("Task tidak ditemukan.", 404)
+        board = task_obj.column.board
+    elif board_id and str(board_id).isdigit():
+        board = Board.objects.filter(pk=int(board_id)).first()
+        if not board:
+            return _err("Board tidak ditemukan.", 404)
+    else:
+        return _err("Pilih Board atau Task untuk milestone ini.")
+
+    date_str = request.POST.get("date", "")
     try:
-        when = date.fromisoformat(request.POST.get("date", ""))
-        board = _visible_boards(request).get(pk=int(request.POST.get("board", "")))
-    except (ValueError, Board.DoesNotExist):
-        return _err("Invalid board or date.")
+        if not date_str and task_obj:
+            when = task_obj.due_date or task_obj.start_date or timezone.localdate()
+        else:
+            when = date.fromisoformat(date_str)
+    except ValueError:
+        return _err("Format tanggal tidak valid (YYYY-MM-DD).")
+
     if not title:
-        return _err("Title is required.")
-    m = Milestone.objects.create(board=board, title=title[:200], date=when, created_by=request.user)
-    return JsonResponse({"ok": True, "id": m.pk})
+        title = f"Milestone: {task_obj.title}" if task_obj else "Milestone"
+
+    m = Milestone.objects.create(
+        board=board,
+        task=task_obj,
+        title=title[:200],
+        date=when,
+        created_by=request.user
+    )
+    return JsonResponse({
+        "ok": True,
+        "id": m.pk,
+        "task_id": m.task_id,
+        "board_id": m.board_id,
+        "title": m.title,
+        "date": m.date.isoformat(),
+        "done": m.is_done,
+    })
 
 
 @login_required
 @require_POST
 def milestone_toggle(request, pk):
-    m = Milestone.objects.filter(pk=pk, board__in=_visible_boards(request)).first()
+    m = Milestone.objects.filter(pk=pk).first()
     if not m:
-        return _err("Not found.", 404)
+        return _err("Milestone tidak ditemukan.", 404)
     m.is_done = not m.is_done
     m.save(update_fields=["is_done"])
     return JsonResponse({"ok": True, "done": m.is_done})
@@ -259,22 +303,22 @@ def milestone_toggle(request, pk):
 @login_required
 @require_POST
 def milestone_move(request, pk):
-    m = Milestone.objects.filter(pk=pk, board__in=_visible_boards(request)).first()
+    m = Milestone.objects.filter(pk=pk).first()
+    if not m:
+        return _err("Milestone tidak ditemukan.", 404)
     try:
         new_date = date.fromisoformat(request.POST.get("date", ""))
     except ValueError:
-        return _err("Invalid date.")
-    if not m:
-        return _err("Not found.", 404)
+        return _err("Format tanggal tidak valid.")
     m.date = new_date
     m.save(update_fields=["date"])
-    return JsonResponse({"ok": True})
+    return JsonResponse({"ok": True, "date": m.date.isoformat()})
 
 
 @login_required
 @require_POST
 def milestone_delete(request, pk):
-    deleted, _ = Milestone.objects.filter(pk=pk, board__in=_visible_boards(request)).delete()
+    deleted, _ = Milestone.objects.filter(pk=pk).delete()
     return JsonResponse({"ok": bool(deleted)})
 
 
