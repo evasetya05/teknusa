@@ -83,7 +83,8 @@ def gantt_view(request):
         selected_board = next((b for b in boards if b.pk == int(board_id)), None)
 
     show_done = request.GET.get("done") == "1"
-    show_nodate = request.GET.get("nodate") == "1"
+    nodate_param = request.GET.get("nodate")
+    show_nodate = (nodate_param != "0")
     scope_boards = [selected_board] if selected_board else boards
 
     base_tasks = Task.objects.select_related("column__board__entity", "gantt_baseline").prefetch_related("assignees")
@@ -164,10 +165,26 @@ def gantt_view(request):
         completed=False, start_date__isnull=True, due_date__isnull=True,
     ).count()
 
+    all_tasks_qs = Task.objects.filter(column__board__in=scope_boards).select_related("column__board__entity").order_by("column__board__name", "title")
+    if not show_done:
+        all_tasks_qs = all_tasks_qs.filter(completed=False)
+
+    all_tasks_for_arrows = [
+        {
+            "id": t.pk,
+            "title": t.title,
+            "board": t.column.board.name,
+            "board_id": t.column.board_id,
+            "entity": t.column.board.entity.name if t.column.board.entity else "Umum (Tanpa PT)",
+        }
+        for t in all_tasks_qs
+    ]
+
     data = {
         "rows": rows,
         "deps": deps,
         "milestones": milestones,
+        "all_tasks": all_tasks_for_arrows,
         "is_all_entities": (selected_entity_id == "all"),
     }
     return render(request, "gantt/gantt.html", {

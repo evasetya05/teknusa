@@ -514,19 +514,50 @@ function onMsBoardChange(boardId) {
 
   // Modal: Arrow Dialog (uses ModalHelper)
   var arrowModal = ModalHelper('arrowModal');
-  var arrowModalBtn = document.getElementById('g-link-modal-btn');
-  if (arrowModalBtn && arrowModal) {
-    arrowModalBtn.addEventListener('click', function () {
-      var selFrom = document.getElementById('arrow-from');
-      var selTo = document.getElementById('arrow-to');
-      selFrom.innerHTML = '<option value="">-- Pilih Task Asal --</option>';
-      selTo.innerHTML = '<option value="">-- Pilih Task Tujuan --</option>';
-      rows.forEach(function (r) {
-        var txt = r.title + ' [' + r.board + (r.entity ? ' - ' + r.entity : '') + ']';
-        var o1 = document.createElement('option'); o1.value = r.id; o1.textContent = txt; selFrom.appendChild(o1);
-        var o2 = document.createElement('option'); o2.value = r.id; o2.textContent = txt; selTo.appendChild(o2);
+
+  function openArrowModal(prefillFromId, prefillToId) {
+    var selFrom = document.getElementById('arrow-from');
+    var selTo = document.getElementById('arrow-to');
+    if (!selFrom || !selTo) return;
+
+    var taskList = (DATA && DATA.all_tasks && DATA.all_tasks.length) ? DATA.all_tasks : rows;
+
+    var htmlFrom = '<option value="">-- Pilih Task Asal (Predecessor) --</option>';
+    var htmlTo = '<option value="">-- Pilih Task Tujuan (Successor) --</option>';
+
+    var byBoard = {};
+    taskList.forEach(function (r) {
+      var bName = r.board + (r.entity ? ' (' + r.entity + ')' : '');
+      if (!byBoard[bName]) byBoard[bName] = [];
+      byBoard[bName].push(r);
+    });
+
+    Object.keys(byBoard).sort().forEach(function (bName) {
+      htmlFrom += '<optgroup label="' + esc(bName) + '">';
+      htmlTo += '<optgroup label="' + esc(bName) + '">';
+      byBoard[bName].forEach(function (r) {
+        var selF = (prefillFromId && String(prefillFromId) === String(r.id)) ? ' selected' : '';
+        var selT = (prefillToId && String(prefillToId) === String(r.id)) ? ' selected' : '';
+        htmlFrom += '<option value="' + r.id + '"' + selF + '>' + esc(r.title) + '</option>';
+        htmlTo += '<option value="' + r.id + '"' + selT + '>' + esc(r.title) + '</option>';
       });
-      arrowModal.show();
+      htmlFrom += '</optgroup>';
+      htmlTo += '</optgroup>';
+    });
+
+    selFrom.innerHTML = htmlFrom;
+    selTo.innerHTML = htmlTo;
+
+    if (prefillFromId) selFrom.value = String(prefillFromId);
+    if (prefillToId) selTo.value = String(prefillToId);
+
+    arrowModal.show();
+  }
+
+  var arrowModalBtn = document.getElementById('g-link-modal-btn');
+  if (arrowModalBtn) {
+    arrowModalBtn.addEventListener('click', function () {
+      openArrowModal();
     });
   }
   var btnSaveArrow = document.getElementById('btn-save-arrow');
@@ -566,15 +597,16 @@ function onMsBoardChange(boardId) {
 
     // Populate successor select
     var succSel = document.getElementById('modal-dep-successor');
-    succSel.innerHTML = '<option value="">-- Pilih Task Tujuan --</option>';
-    rows.forEach(function (r) {
-      if (r.id != task.id) {
-        var opt = document.createElement('option');
-        opt.value = r.id;
-        opt.textContent = r.title + ' [' + r.board + ']';
-        succSel.appendChild(opt);
-      }
-    });
+    if (succSel) {
+      var taskList = (DATA && DATA.all_tasks && DATA.all_tasks.length) ? DATA.all_tasks : rows;
+      var succHtml = '<option value="">-- Pilih Task Tujuan --</option>';
+      taskList.forEach(function (r) {
+        if (String(r.id) !== String(task.id)) {
+          succHtml += '<option value="' + r.id + '">' + esc(r.title) + ' [' + esc(r.board) + ']</option>';
+        }
+      });
+      succSel.innerHTML = succHtml;
+    }
 
     document.getElementById('modal-ms-title').value = 'Milestone: ' + task.title;
     document.getElementById('modal-ms-date').value = task.end || task.start || TODAY;
@@ -879,7 +911,7 @@ function onMsBoardChange(boardId) {
     grid.querySelectorAll('.quick-link-btn').forEach(function (btn) {
       btn.addEventListener('click', function (e) {
         e.stopPropagation();
-        activateLinkFrom(btn.dataset.id);
+        openArrowModal(btn.dataset.id);
       });
     });
     grid.querySelectorAll('.quick-ms-btn').forEach(function (btn) {
